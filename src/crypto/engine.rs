@@ -1,6 +1,6 @@
 use gpgme;
 
-use crate::error::{Result};
+use crate::error::{Error, Result};
 use super::key::{Key, KeyId, ExportedKey};
 
 
@@ -29,12 +29,17 @@ impl CryptoEngine {
 
     /// Looks for a key with specific identifier.
     /// 
+    /// Key is returned if and only if it exists and is suitable for bdgt.
+    /// 
     /// * `id` - identifier of a key to look for
     pub fn lookup_key(&mut self, id: &KeyId) -> Result<Key> {
         let internal_key = self.ctx
             .get_key(id.native_id())?;
 
-        Ok(Key::new(internal_key, id))
+        let key = Key::new(internal_key, id);
+        key.is_suitable()
+            .then_some(key)
+            .ok_or(Error::from_message_with_extra("Key is not suitable for bdgt", id.to_string()))
     }
 
     /// Exports a public key.

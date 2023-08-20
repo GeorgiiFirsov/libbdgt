@@ -9,8 +9,39 @@ pub struct Error {
 }
 
 
+impl Error {
+    /// Constructs an error from message.
+    /// 
+    /// * `msg` - error message as something convertible into a [`alloc::string::String`]
+    pub fn from_message<M>(msg: M) -> Self 
+    where
+        M: Into<String>
+    {
+        Error { 
+            msg: msg.into(), 
+            extra: String::new() 
+        }
+    }
+
+    /// Constructs an error from message with some extra information.
+    /// 
+    /// * `msg` - error message as something convertible into a [`alloc::string::String`]
+    /// * `extra` - extra information as something convertible into a [`alloc::string::String`]
+    pub fn from_message_with_extra<M, E>(msg: M, extra: E) -> Self
+    where
+        M: Into<String>,
+        E: Into<String>
+    {
+        Error { 
+            msg: msg.into(), 
+            extra: extra.into() 
+        }
+    }
+}
+
+
 impl std::fmt::Display for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::result::Result<(), std::fmt::Error> {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, r#"Message: "{}" (extra: "{}")"#, self.msg, self.extra)
     }
 }

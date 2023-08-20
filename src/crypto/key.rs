@@ -1,4 +1,5 @@
 use std::ffi::{CStr, CString};
+use std::fmt::{Display, Formatter};
 
 use gpgme;
 
@@ -37,6 +38,13 @@ impl From<&str> for KeyId {
 }
 
 
+impl Display for KeyId {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self.native_id())
+    }
+}
+
+
 /// Structure, that wraps a key handle.
 pub struct Key {
     /// Internal backend-specific key handle
@@ -62,6 +70,19 @@ impl Key {
     /// Returns a native key handle.
     pub(crate) fn native_handle(&self) -> &NativeHandle {
         &self.key
+    }
+
+    /// Checks if the key is suitable for bdgt.
+    /// 
+    /// Key MUST NOT be expired, revoked, disabled, 
+    /// MUST contain a secret key and MUST be able 
+    /// to perform encryption.
+    pub(crate) fn is_suitable(&self) -> bool {
+        let is_good = !self.key.is_bad();
+        let can_encrypt = self.key.can_encrypt();
+        let has_secret_key = self.key.has_secret();
+
+        is_good && has_secret_key && can_encrypt
     }
 }
 
