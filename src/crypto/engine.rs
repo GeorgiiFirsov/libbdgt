@@ -2,6 +2,7 @@ use gpgme;
 
 use crate::error::{Error, Result};
 use super::key::{Key, KeyId, ExportedKey};
+use super::{MISSING_SECRET_KEY, KEY_IS_NOT_SUITABLE};
 
 
 /// Cryptographic engine wrapper.
@@ -36,10 +37,7 @@ impl CryptoEngine {
         let internal_key = self.ctx
             .get_key(id.native_id())?;
 
-        let key = Key::new(internal_key, id);
-        key.is_suitable()
-            .then_some(key)
-            .ok_or(Error::from_message_with_extra("Key is not suitable for bdgt", id.to_string()))
+        self.verify_key(Key::new(internal_key, id))
     }
 
     /// Exports a public key.
@@ -67,5 +65,28 @@ impl CryptoEngine {
             .export_keys(keys, mode, &mut out)?;
 
         Ok(ExportedKey::new(out))
-    } 
+    }
+
+    fn verify_key(&mut self, key: Key) -> Result<Key> {
+        let id = key
+            .id()
+            .clone();
+
+        //
+        // Check if there is corresponding private key
+        //
+
+        let secret_keys = self.ctx.find_secret_keys(vec![id.native_id()])?;
+        if 0 == secret_keys.count() {
+            return Err(Error::from_message_with_extra(MISSING_SECRET_KEY, id.to_string()));
+        }
+
+        //
+        // Now let's verify if all key properties are satisfied
+        //
+
+        key.is_suitable()
+            .then_some(key)
+            .ok_or(Error::from_message_with_extra(KEY_IS_NOT_SUITABLE, id.to_string()))
+    }
 }

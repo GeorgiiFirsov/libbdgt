@@ -74,15 +74,18 @@ impl Key {
 
     /// Checks if the key is suitable for bdgt.
     /// 
-    /// Key MUST NOT be expired, revoked, disabled, 
-    /// MUST contain a secret key and MUST be able 
+    /// Key MUST NOT be expired, revoked nor disabled, and MUST be able 
     /// to perform encryption.
     pub(crate) fn is_suitable(&self) -> bool {
         let is_good = !self.key.is_bad();
         let can_encrypt = self.key.can_encrypt();
-        let has_secret_key = self.key.has_secret();
 
-        is_good && has_secret_key && can_encrypt
+        is_good && can_encrypt
+    }
+
+    /// Returns key identifier
+    pub fn id(&self) -> &KeyId {
+        &self.id
     }
 }
 
