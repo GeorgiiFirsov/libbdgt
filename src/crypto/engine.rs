@@ -48,7 +48,6 @@ impl CryptoEngine {
     /// 
     /// * `key` - key handle
     pub fn export_secret_key(&mut self, key: &Key) -> Result<ExportedKey> {
-        self.ctx.set_pinentry_mode(gpgme::PinentryMode::Ask);
         self.internal_export_key(key, gpgme::ExportMode::SECRET)
     }
 
