@@ -76,7 +76,9 @@ impl CryptoEngine {
         // Check if there is corresponding private key
         //
 
-        let secret_keys = self.ctx.find_secret_keys(vec![id.native_id()])?;
+        let key_ids = [id.native_id()];
+        let secret_keys = self.ctx.find_secret_keys(key_ids)?;
+        
         if 0 == secret_keys.count() {
             return Err(Error::from_message_with_extra(MISSING_SECRET_KEY, id.to_string()));
         }
