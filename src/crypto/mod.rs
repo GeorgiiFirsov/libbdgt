@@ -1,7 +1,9 @@
 mod engine;
 mod key;
+mod gpg_engine;
 
-pub use self::engine::{CryptoEngine};
+pub use self::engine::CryptoEngine;
+pub use self::gpg_engine::GpgCryptoEngine;
 pub use self::key::{Key, KeyId, ExportedKey};
 
 
