@@ -4,7 +4,7 @@ use gpgme;
 
 use super::engine::CryptoEngine;
 use crate::error::{Error, Result};
-use super::key::{Key, KeyId, ExportedKey, KeyHandle, KeyIdentifier};
+use super::key::{Key, KeyId, ExportedKey, KeyHandle, KeyIdentifierImpl};
 use super::{MISSING_SECRET_KEY, KEY_IS_NOT_SUITABLE};
 
 
@@ -25,7 +25,7 @@ impl KeyHandle for NativeHandle {
 /// Engine-specific key identifier type.
 type NativeId = CString;
 
-impl KeyIdentifier for NativeId {
+impl KeyIdentifierImpl for NativeId {
     fn create(id: &str) -> Self {
         NativeId::new(id).unwrap()   
     }

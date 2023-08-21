@@ -7,3 +7,4 @@ edition = "2021"
 
 [dependencies]
 gpgme = "0.11.0"
+trait-set = "0.3.0"

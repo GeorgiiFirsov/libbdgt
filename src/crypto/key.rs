@@ -1,5 +1,7 @@
 use std::fmt::{Display, Formatter, Debug};
 
+use trait_set::trait_set;
+
 
 /// Key handle trait.
 /// 
@@ -13,14 +15,22 @@ pub trait KeyHandle {
 }
 
 
-/// Key identifier trait.
+/// Internal key identifier trait.
 /// 
 /// Implemented for concrete engine-specific identifier types.
-pub trait KeyIdentifier {
+pub trait KeyIdentifierImpl {
     /// Creates an identifier from string reference.
     /// 
     /// * `id` - identifier as string
     fn create(id: &str) -> Self;
+}
+
+
+// Trait aliases are defined using `trait-set` crate,
+// because complex trait aliases are unstable for now
+trait_set! {
+    /// Key identifier trait.
+    pub trait KeyIdentifier = Clone + Debug + KeyIdentifierImpl;
 }
 
 
@@ -36,7 +46,7 @@ pub struct KeyId<NativeId> {
 
 impl<'a, NativeId> KeyId<NativeId> 
 where
-    NativeId: Debug + KeyIdentifier
+    NativeId: KeyIdentifier
 {
     /// Creates a new key identifier from string reference.
     /// 
@@ -49,7 +59,7 @@ where
 
 impl<NativeId> KeyId<NativeId>
 where
-    NativeId: Debug
+    NativeId: KeyIdentifier
 {
     /// Returns a backend-specific key identifier representation.
     pub(crate) fn native_id(&self) -> &NativeId {
@@ -60,7 +70,7 @@ where
 
 impl<NativeId> Display for KeyId<NativeId>
 where
-    NativeId: Debug
+    NativeId: KeyIdentifier
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{:?}", self.native_id())
@@ -81,7 +91,7 @@ pub struct Key<NativeHandle, NativeId> {
 impl<NativeHandle, NativeId> Key<NativeHandle, NativeId> 
 where
     NativeHandle: KeyHandle,
-    NativeId: Debug + Clone
+    NativeId: KeyIdentifier
 {
     /// Creates a key handle from native key handle and identifier.
     /// 
