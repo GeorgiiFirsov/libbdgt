@@ -54,13 +54,7 @@ where
     pub fn new(id: &str) -> Self {
         KeyId { id: NativeId::create(id) }
     }
-}
-
-
-impl<NativeId> KeyId<NativeId>
-where
-    NativeId: KeyIdentifier
-{
+    
     /// Returns a backend-specific key identifier representation.
     pub(crate) fn native_id(&self) -> &NativeId {
         &self.id
