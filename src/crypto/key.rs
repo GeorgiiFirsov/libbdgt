@@ -44,7 +44,7 @@ pub struct KeyId<NativeId> {
 }
 
 
-impl<'a, NativeId> KeyId<NativeId> 
+impl<NativeId> KeyId<NativeId> 
 where
     NativeId: KeyIdentifier
 {
