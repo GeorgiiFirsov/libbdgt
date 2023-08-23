@@ -3,9 +3,10 @@ use std::ffi::CString;
 use gpgme;
 
 use super::engine::CryptoEngine;
+use super::buffer::CryptoBuffer;
 use crate::error::{Error, Result};
-use super::key::{Key, KeyId, ExportedKey, KeyHandle, KeyIdentifierImpl};
-use super::{MISSING_SECRET_KEY, KEY_IS_NOT_SUITABLE};
+use super::key::{Key, KeyId, KeyHandle, KeyIdentifierImpl};
+use super::{MISSING_SECRET_KEY, KEY_IS_NOT_SUITABLE, ENCRYPTION_ERROR, DECRYPTION_ERROR};
 
 
 /// Engine-specific key ahndle type.
@@ -55,19 +56,6 @@ impl GpgCryptoEngine {
         )
     }
 
-    fn internal_export_key(&mut self, key: &<GpgCryptoEngine as CryptoEngine>::Key, mode: gpgme::ExportMode) -> Result<ExportedKey> {
-        //
-        // GPG backend works only with iterables, hence I create an array with one single element
-        //
-        let keys = [key.native_handle()];
-
-        let mut out = Vec::new();
-        self.ctx
-            .export_keys(keys, mode, &mut out)?;
-
-        Ok(ExportedKey::new(out))
-    }
-
     fn verify_key(&mut self, key: <GpgCryptoEngine as CryptoEngine>::Key) -> Result<<GpgCryptoEngine as CryptoEngine>::Key> {
         let id = key
             .id()
@@ -92,6 +80,24 @@ impl GpgCryptoEngine {
             .then_some(key)
             .ok_or(Error::from_message_with_extra(KEY_IS_NOT_SUITABLE, id.to_string()))
     }
+
+    fn check_encryption_result(result: gpgme::EncryptionResult) -> Result<()> {
+        let invalid_count = result
+            .invalid_recipients()
+            .count();
+
+        (0 == invalid_count)
+            .then_some(())
+            .ok_or(Error::from_message(ENCRYPTION_ERROR))
+    }
+
+    fn check_decryption_result(result: gpgme::DecryptionResult) -> Result<()> {
+        let correct = !result.is_wrong_key_usage();
+
+        correct
+            .then_some(())
+            .ok_or(Error::from_message(DECRYPTION_ERROR))
+    }
 }
 
 
@@ -104,7 +110,8 @@ impl CryptoEngine for GpgCryptoEngine {
     }
 
     fn version(&self) -> &'static str {
-        self.engine.version()
+        self.engine
+            .version()
     }
 
     fn lookup_key(&mut self, id: &Self::KeyId) -> Result<Self::Key> {
@@ -114,11 +121,24 @@ impl CryptoEngine for GpgCryptoEngine {
         self.verify_key(Key::new(internal_key, id))
     }
 
-    fn export_key(&mut self, key: &Self::Key) -> Result<ExportedKey> {
-        self.internal_export_key(key, gpgme::ExportMode::MINIMAL)
+    fn encrypt(&mut self, key: &Self::Key, plaintext: &[u8]) -> Result<CryptoBuffer> {
+        let keys = [key.native_handle()];
+        let mut ciphertext = Vec::new();
+
+        self.ctx
+            .encrypt(keys, plaintext, &mut ciphertext)
+            .map_err(Error::from)
+            .and_then(Self::check_encryption_result)
+            .map(|_| CryptoBuffer::new(ciphertext))
     }
 
-    fn export_secret_key(&mut self, key: &Self::Key) -> Result<ExportedKey> {
-        self.internal_export_key(key, gpgme::ExportMode::SECRET)
+    fn decrypt(&mut self, _key: &Self::Key, ciphertext: &[u8]) -> Result<CryptoBuffer> {
+        let mut plaintext = Vec::new();
+
+        self.ctx
+            .decrypt(ciphertext, &mut plaintext)
+            .map_err(Error::from)
+            .and_then(Self::check_decryption_result)
+            .map(|_| CryptoBuffer::new(plaintext))
     }
 }
