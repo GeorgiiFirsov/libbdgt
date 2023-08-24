@@ -7,6 +7,8 @@ pub use self::engine::CryptoEngine;
 pub use self::gpg_engine::GpgCryptoEngine;
 pub use self::key::{Key, KeyId};
 
+pub(crate) use self::key::KeyIdentifier;
+
 
 /// Error message for missing secret key.
 const MISSING_SECRET_KEY: &str = "Secret key is missing";

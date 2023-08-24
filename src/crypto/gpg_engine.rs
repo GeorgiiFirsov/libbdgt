@@ -30,6 +30,12 @@ impl KeyIdentifierImpl for NativeId {
     fn create(id: &str) -> Self {
         NativeId::new(id).unwrap()   
     }
+
+    fn str(&self) -> String {
+        self.to_str()
+            .unwrap()
+            .to_owned()
+    }
 }
 
 

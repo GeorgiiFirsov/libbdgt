@@ -23,6 +23,9 @@ pub trait KeyIdentifierImpl {
     /// 
     /// * `id` - identifier as string
     fn create(id: &str) -> Self;
+
+    /// Converts identifier into a string.
+    fn str(&self) -> String;
 }
 
 
