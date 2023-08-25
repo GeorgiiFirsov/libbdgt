@@ -1,4 +1,7 @@
+use std::io;
+
 use gpgme;
+use rusqlite;
 
 
 /// Structure, that describes all errors in bdgt.
@@ -65,6 +68,32 @@ impl From<gpgme::Error> for Error {
         Error { 
             msg: msg, 
             extra: extra 
+        }
+    }
+}
+
+
+impl From<rusqlite::Error> for Error {
+    fn from(value: rusqlite::Error) -> Self {
+        let msg = value
+            .to_string();
+
+        Error {
+            msg: msg,
+            extra: String::new()
+        }
+    }
+}
+
+
+impl From<io::Error> for Error {
+    fn from(value: io::Error) -> Self {
+        let msg = value
+            .to_string();
+
+        Error {
+            msg: msg,
+            extra: String::new()
         }
     }
 }
