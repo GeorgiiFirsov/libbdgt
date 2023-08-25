@@ -25,10 +25,14 @@ impl Location for HomeLocation {
             .join(".bdgt")
     }
 
+    fn exists(&self) -> bool {
+        self.root()
+            .exists()
+    }
+
     fn create_if_absent(&self) -> crate::error::Result<()> {
-        let root = self.root();
-        if !root.exists() {
-            fs::create_dir_all(root)?;
+        if !self.exists() {
+            fs::create_dir_all(self.root())?;
         }
 
         Ok(())
