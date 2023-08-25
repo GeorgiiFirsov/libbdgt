@@ -1,4 +1,5 @@
 use std::path;
+use std::fs;
 
 use dirs;
 
@@ -22,5 +23,14 @@ impl Location for HomeLocation {
         dirs::home_dir()
             .unwrap()
             .join(".bdgt")
+    }
+
+    fn create_if_absent(&self) -> crate::error::Result<()> {
+        let root = self.root();
+        if !root.exists() {
+            fs::create_dir_all(root)?;
+        }
+
+        Ok(())
     }
 }

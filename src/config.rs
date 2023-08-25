@@ -37,7 +37,13 @@ where
     /// 
     /// * `loc` - storage location provider
     /// * `key_id` - key identifier
-    pub fn create<L: Location>(loc: &L, key_id: Ce::KeyId) -> Result<Self> {
+    pub fn create<L: Location>(loc: &L, key_id: &Ce::KeyId) -> Result<Self> {
+        //
+        // Check is root location exists and create it if necessary
+        //
+
+        loc.create_if_absent()?;
+
         //
         // Save key into a file and then just open config :)
         //
