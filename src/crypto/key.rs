@@ -42,6 +42,13 @@ impl<NativeId> KeyId<NativeId>
 where
     NativeId: Clone + Debug + KeyIdentifier
 {
+    /// Creates an identifier from string reference (public API).
+    /// 
+    /// * `id` - identifier as string
+    pub fn new(id: &str) -> Self {
+        Self::from_str(id)
+    }
+
     /// Returns a backend-specific key identifier representation.
     pub(crate) fn native_id(&self) -> &NativeId {
         &self.id
