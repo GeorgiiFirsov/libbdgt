@@ -19,7 +19,7 @@ pub trait KeyIdentifier {
 /// Key handle trait.
 /// 
 /// Implemented for concrete engine-specific handles.
-pub(crate) trait KeyHandle {
+pub trait KeyHandle {
     /// Checks if key is not expired, not revoked and not disabled.
     fn is_good(&self) -> bool;
 

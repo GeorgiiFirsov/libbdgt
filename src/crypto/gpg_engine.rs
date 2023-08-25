@@ -2,9 +2,9 @@ use std::ffi::CString;
 
 use gpgme;
 
+use crate::error::{Error, Result};
 use super::engine::CryptoEngine;
 use super::buffer::CryptoBuffer;
-use crate::error::{Error, Result};
 use super::key::{Key, KeyId, KeyHandle, KeyIdentifier};
 use super::{MISSING_SECRET_KEY, KEY_IS_NOT_SUITABLE, ENCRYPTION_ERROR, DECRYPTION_ERROR};
 
