@@ -4,7 +4,6 @@
 
 extern crate dirs;
 extern crate gpgme;
-extern crate trait_set;
 
 //
 // Public modules

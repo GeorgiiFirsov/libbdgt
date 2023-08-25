@@ -5,11 +5,11 @@ use gpgme;
 use super::engine::CryptoEngine;
 use super::buffer::CryptoBuffer;
 use crate::error::{Error, Result};
-use super::key::{Key, KeyId, KeyHandle, KeyIdentifierImpl};
+use super::key::{Key, KeyId, KeyHandle, KeyIdentifier};
 use super::{MISSING_SECRET_KEY, KEY_IS_NOT_SUITABLE, ENCRYPTION_ERROR, DECRYPTION_ERROR};
 
 
-/// Engine-specific key ahndle type.
+/// Engine-specific key handle type.
 type NativeHandle = gpgme::Key;
 
 impl KeyHandle for NativeHandle {
@@ -26,12 +26,12 @@ impl KeyHandle for NativeHandle {
 /// Engine-specific key identifier type.
 type NativeId = CString;
 
-impl KeyIdentifierImpl for NativeId {
-    fn create(id: &str) -> Self {
+impl KeyIdentifier for NativeId {
+    fn from_str(id: &str) -> Self {
         NativeId::new(id).unwrap()   
     }
 
-    fn str(&self) -> String {
+    fn as_string(&self) -> String {
         self.to_str()
             .unwrap()
             .to_owned()
@@ -54,12 +54,10 @@ impl GpgCryptoEngine {
     pub fn new() -> Result<Self> {
         let ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
 
-        Ok(
-            GpgCryptoEngine { 
-                engine: gpgme::init(),
-                ctx: ctx
-            }
-        )
+        Ok(GpgCryptoEngine { 
+            engine: gpgme::init(),
+            ctx: ctx
+        })
     }
 
     fn verify_key(&mut self, key: <GpgCryptoEngine as CryptoEngine>::Key) -> Result<<GpgCryptoEngine as CryptoEngine>::Key> {
