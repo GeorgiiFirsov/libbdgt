@@ -44,5 +44,13 @@ where
         })
     }
 
-    // TODO
+    /// Underlying cryptographic engine name.
+    pub fn engine(&self) -> &str {
+        self.crypto_engine.engine()
+    }
+
+    /// Underlying cryptofgraphic engine version.
+    pub fn engine_version(&self) -> &str {
+        self.crypto_engine.version()
+    }
 }
