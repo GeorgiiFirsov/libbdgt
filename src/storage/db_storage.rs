@@ -5,7 +5,7 @@ use rusqlite;
 use crate::error::{Result, Error};
 use crate::location::Location;
 use super::data::{EncryptedTransaction, EncryptedCategory, EncryptedAccount, Id};
-use super::storage::Storage;
+use super::storage::DataStorage;
 
 
 /// Storage implemented using SQLite.
@@ -58,7 +58,7 @@ impl DbStorage {
 }
 
 
-impl Storage for DbStorage {
+impl DataStorage for DbStorage {
     fn add_transaction(&self, account: Id, transaction: EncryptedTransaction) -> Result<()> {
         Ok(())
     }

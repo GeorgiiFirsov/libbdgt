@@ -1,5 +1,5 @@
 use crate::crypto::{CryptoEngine, KeyIdentifier};
-use super::storage::Storage;
+use super::storage::DataStorage;
 use crate::config::Config;
 use crate::error::Result;
 
@@ -8,7 +8,7 @@ use crate::error::Result;
 pub struct Budget<Ce, St>
 where
     Ce: CryptoEngine,
-    St: Storage
+    St: DataStorage
 {
     /// Cryptographic engine used to encrypt sensitive data.
     crypto_engine: Ce,
@@ -24,7 +24,7 @@ where
 impl<Ce, St> Budget<Ce, St>
 where
     Ce: CryptoEngine,
-    St: Storage,
+    St: DataStorage,
     Ce::KeyId: KeyIdentifier
 {
     /// Creates a budget manager instance.

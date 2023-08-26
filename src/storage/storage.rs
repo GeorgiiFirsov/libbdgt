@@ -3,7 +3,7 @@ use super::data::{EncryptedTransaction, EncryptedCategory, EncryptedAccount, Id}
 
 
 /// Storage trait, that provides protected data reading and writing.
-pub trait Storage {
+pub trait DataStorage {
     /// Add a new transaction.
     /// 
     /// * `account` - identifier of account to add transaction to
