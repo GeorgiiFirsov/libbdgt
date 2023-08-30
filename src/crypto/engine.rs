@@ -21,17 +21,17 @@ pub trait CryptoEngine {
     /// Key is returned if and only if it exists and is suitable for bdgt.
     /// 
     /// * `id` - identifier of a key to look for
-    fn lookup_key(&mut self, id: &Self::KeyId) -> Result<Self::Key>;
+    fn lookup_key(&self, id: &Self::KeyId) -> Result<Self::Key>;
 
     /// Encrypts a BLOB using a public key.
     /// 
     /// * `key` - handle to a public key, taht is intended to be used for encryption
     /// * `plaintext` - data to encrypt
-    fn encrypt(&mut self, key: &Self::Key, plaintext: &[u8]) -> Result<CryptoBuffer>;
+    fn encrypt(&self, key: &Self::Key, plaintext: &[u8]) -> Result<CryptoBuffer>;
 
     /// Decrypts a BLOB using a private key.
     /// 
     /// * `key` - handle to a private key, taht is intended to be used for decryption
     /// * `plaintext` - data to decrypt
-    fn decrypt(&mut self, key: &Self::Key, ciphertext: &[u8]) -> Result<CryptoBuffer>;
+    fn decrypt(&self, key: &Self::Key, ciphertext: &[u8]) -> Result<CryptoBuffer>;
 }

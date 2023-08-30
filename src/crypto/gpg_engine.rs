@@ -1,4 +1,5 @@
 use std::ffi::CString;
+use std::cell::RefCell;
 
 use gpgme;
 
@@ -45,7 +46,7 @@ pub struct GpgCryptoEngine {
     engine: gpgme::Gpgme,
 
     /// Internal context
-    ctx: gpgme::Context
+    ctx: RefCell<gpgme::Context>
 }
 
 
@@ -56,21 +57,27 @@ impl GpgCryptoEngine {
 
         Ok(GpgCryptoEngine { 
             engine: gpgme::init(),
-            ctx: ctx
+            ctx: RefCell::new(ctx)
         })
     }
 
-    fn verify_key(&mut self, key: <GpgCryptoEngine as CryptoEngine>::Key) -> Result<<GpgCryptoEngine as CryptoEngine>::Key> {
-        let id = key
-            .id()
-            .clone();
+    fn verify_key(&self, key: <GpgCryptoEngine as CryptoEngine>::Key) -> Result<<GpgCryptoEngine as CryptoEngine>::Key> {
+        //
+        // Borrow context for the entire function life
+        //
+
+        let mut borrowed_ctx = self.ctx.borrow_mut();
 
         //
         // Check if there is corresponding private key
         //
 
+        let id = key
+            .id()
+            .clone();
+
         let key_ids = [id.native_id()];
-        let secret_keys = self.ctx.find_secret_keys(key_ids)?;
+        let secret_keys = borrowed_ctx.find_secret_keys(key_ids)?;
 
         if 0 == secret_keys.count() {
             return Err(Error::from_message_with_extra(MISSING_SECRET_KEY, id.to_string()));
@@ -118,28 +125,31 @@ impl CryptoEngine for GpgCryptoEngine {
             .version()
     }
 
-    fn lookup_key(&mut self, id: &Self::KeyId) -> Result<Self::Key> {
+    fn lookup_key(&self, id: &Self::KeyId) -> Result<Self::Key> {
         let internal_key = self.ctx
+            .borrow_mut()
             .get_key(id.native_id())?;
 
         self.verify_key(Key::new(internal_key, id))
     }
 
-    fn encrypt(&mut self, key: &Self::Key, plaintext: &[u8]) -> Result<CryptoBuffer> {
+    fn encrypt(&self, key: &Self::Key, plaintext: &[u8]) -> Result<CryptoBuffer> {
         let keys = [key.native_handle()];
         let mut ciphertext = Vec::new();
 
         self.ctx
+            .borrow_mut()
             .encrypt(keys, plaintext, &mut ciphertext)
             .map_err(Error::from)
             .and_then(Self::check_encryption_result)
             .map(|_| CryptoBuffer::new(ciphertext))
     }
 
-    fn decrypt(&mut self, _key: &Self::Key, ciphertext: &[u8]) -> Result<CryptoBuffer> {
+    fn decrypt(&self, _key: &Self::Key, ciphertext: &[u8]) -> Result<CryptoBuffer> {
         let mut plaintext = Vec::new();
 
         self.ctx
+            .borrow_mut()
             .decrypt(ciphertext, &mut plaintext)
             .map_err(Error::from)
             .and_then(Self::check_decryption_result)
