@@ -4,6 +4,7 @@ mod gpg_engine;
 mod buffer;
 
 pub use self::engine::CryptoEngine;
+pub use self::buffer::CryptoBuffer;
 pub use self::gpg_engine::GpgCryptoEngine;
 pub use self::key::{Key, KeyId};
 

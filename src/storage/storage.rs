@@ -43,7 +43,7 @@ pub trait DataStorage {
 
     /// Add a new category.
     /// 
-    /// * `category` - protected category datda
+    /// * `category` - protected category data
     fn add_category(&self, category: EncryptedCategory) -> Result<()>;
 
     /// Remove category if possible.
