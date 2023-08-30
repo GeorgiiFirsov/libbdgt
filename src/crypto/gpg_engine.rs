@@ -60,7 +60,56 @@ impl GpgCryptoEngine {
             ctx: RefCell::new(ctx)
         })
     }
+}
 
+
+impl CryptoEngine for GpgCryptoEngine {
+    type Key = Key<NativeHandle, NativeId>;
+    type KeyId = KeyId<NativeId>;
+
+    fn engine(&self) -> &'static str {
+        "GnuPG"
+    }
+
+    fn version(&self) -> &'static str {
+        self.engine
+            .version()
+    }
+
+    fn lookup_key(&self, id: &Self::KeyId) -> Result<Self::Key> {
+        let internal_key = self.ctx
+            .borrow_mut()
+            .get_key(id.native_id())?;
+
+        self.verify_key(Key::new(internal_key, id))
+    }
+
+    fn encrypt(&self, key: &Self::Key, plaintext: &[u8]) -> Result<CryptoBuffer> {
+        let keys = [key.native_handle()];
+        let mut ciphertext = Vec::new();
+
+        self.ctx
+            .borrow_mut()
+            .encrypt(keys, plaintext, &mut ciphertext)
+            .map_err(Error::from)
+            .and_then(Self::check_encryption_result)
+            .map(|_| CryptoBuffer::new(ciphertext))
+    }
+
+    fn decrypt(&self, _key: &Self::Key, ciphertext: &[u8]) -> Result<CryptoBuffer> {
+        let mut plaintext = Vec::new();
+
+        self.ctx
+            .borrow_mut()
+            .decrypt(ciphertext, &mut plaintext)
+            .map_err(Error::from)
+            .and_then(Self::check_decryption_result)
+            .map(|_| CryptoBuffer::new(plaintext))
+    }
+}
+
+
+impl GpgCryptoEngine {
     fn verify_key(&self, key: <GpgCryptoEngine as CryptoEngine>::Key) -> Result<<GpgCryptoEngine as CryptoEngine>::Key> {
         //
         // Borrow context for the entire function life
@@ -108,51 +157,5 @@ impl GpgCryptoEngine {
         correct
             .then_some(())
             .ok_or(Error::from_message(DECRYPTION_ERROR))
-    }
-}
-
-
-impl CryptoEngine for GpgCryptoEngine {
-    type Key = Key<NativeHandle, NativeId>;
-    type KeyId = KeyId<NativeId>;
-
-    fn engine(&self) -> &'static str {
-        "GnuPG"
-    }
-
-    fn version(&self) -> &'static str {
-        self.engine
-            .version()
-    }
-
-    fn lookup_key(&self, id: &Self::KeyId) -> Result<Self::Key> {
-        let internal_key = self.ctx
-            .borrow_mut()
-            .get_key(id.native_id())?;
-
-        self.verify_key(Key::new(internal_key, id))
-    }
-
-    fn encrypt(&self, key: &Self::Key, plaintext: &[u8]) -> Result<CryptoBuffer> {
-        let keys = [key.native_handle()];
-        let mut ciphertext = Vec::new();
-
-        self.ctx
-            .borrow_mut()
-            .encrypt(keys, plaintext, &mut ciphertext)
-            .map_err(Error::from)
-            .and_then(Self::check_encryption_result)
-            .map(|_| CryptoBuffer::new(ciphertext))
-    }
-
-    fn decrypt(&self, _key: &Self::Key, ciphertext: &[u8]) -> Result<CryptoBuffer> {
-        let mut plaintext = Vec::new();
-
-        self.ctx
-            .borrow_mut()
-            .decrypt(ciphertext, &mut plaintext)
-            .map_err(Error::from)
-            .and_then(Self::check_decryption_result)
-            .map(|_| CryptoBuffer::new(plaintext))
     }
 }

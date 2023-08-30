@@ -44,17 +44,6 @@ impl DbStorage {
             .create_db()
             .and(Ok(storage))
     }
-
-    fn create_db(&self) -> Result<()> {
-        self.db
-            .execute_batch(include_str!("../../sql/creation.sql"))
-            .map_err(Error::from)
-    }
-
-    fn db_path<L: Location>(loc: &L) -> path::PathBuf {
-        loc.root()
-            .join("database")
-    }
 }
 
 
@@ -97,5 +86,19 @@ impl DataStorage for DbStorage {
 
     fn categories(&self) -> Result<Vec<EncryptedCategory>> {
         Ok(Vec::new())
+    }
+}
+
+
+impl DbStorage {
+    fn create_db(&self) -> Result<()> {
+        self.db
+            .execute_batch(include_str!("../../sql/creation.sql"))
+            .map_err(Error::from)
+    }
+
+    fn db_path<L: Location>(loc: &L) -> path::PathBuf {
+        loc.root()
+            .join("database")
     }
 }

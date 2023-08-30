@@ -58,7 +58,14 @@ where
     pub fn key_id(&self) -> &Ce::KeyId {
         &self.key_id
     }
+}
 
+
+impl<Ce> Config<Ce>
+where
+    Ce: CryptoEngine,
+    Ce::KeyId: KeyIdentifier
+{
     fn key_file<L: Location>(loc: &L) -> path::PathBuf {
         loc.root()
             .join("key")
