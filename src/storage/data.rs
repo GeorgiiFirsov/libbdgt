@@ -6,16 +6,13 @@ pub type Id = usize;
 
 
 /// Types of categories.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)]
 pub enum CategoryType {
     /// Incomes
     Income,
 
     /// Spendings
     Outcome,
-
-    /// Transfers
-    Transfer,
 }
 
 
