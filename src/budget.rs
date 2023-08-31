@@ -35,8 +35,7 @@ where
     /// * `crypto_engine` - cryptographic engine used to encrypt sensitive data
     /// * `storage` - storage used to store data
     /// * `config` - app's configuration
-    pub fn new(crypto_engine: Ce, storage: St, config: Config<Ce>) -> Result<Self>
-    {
+    pub fn new(crypto_engine: Ce, storage: St, config: Config<Ce>) -> Result<Self> {
         let key = crypto_engine
             .lookup_key(config.key_id())?;
 
