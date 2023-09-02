@@ -196,6 +196,7 @@ where
         let encrypted_amount = self.encrypt_isize(&transaction.amount)?;
 
         Ok(EncryptedTransaction {
+            id: transaction.id,
             datetime: transaction.datetime,
             description: encrypted_description.as_raw().into(),
             category_id: transaction.category_id,
@@ -209,6 +210,7 @@ where
         let decrypted_amount = self.decrypt_isize(encrypted_transaction.amount.as_slice())?;
 
         Ok(Transaction {
+            id: encrypted_transaction.id,
             datetime: encrypted_transaction.datetime,
             description: decrypted_description,
             category_id: encrypted_transaction.category_id,
@@ -222,6 +224,7 @@ where
         let encrypted_balance = self.encrypt_isize(&account.balance)?;
 
         Ok(EncryptedAccount { 
+            id: account.id,
             name: encrypted_name.as_raw().into(), 
             balance: encrypted_balance.as_raw().into() 
         })
@@ -232,6 +235,7 @@ where
         let decrypted_balance = self.decrypt_isize(encrypted_account.balance.as_slice())?;
 
         Ok(Account { 
+            id: encrypted_account.id,
             name: decrypted_name, 
             balance: decrypted_balance
         })
@@ -241,6 +245,7 @@ where
         let encrypted_name = self.encrypt_string(&category.name)?;
 
         Ok(EncryptedCategory {
+            id: category.id,
             name: encrypted_name.as_raw().into(),
             category_type: category.category_type
         })
@@ -250,6 +255,7 @@ where
         let decrypted_category = self.decrypt_string(encrypted_category.name.as_slice())?;
 
         Ok(Category { 
+            id: encrypted_category.id,
             name: decrypted_category, 
             category_type: encrypted_category.category_type
         })

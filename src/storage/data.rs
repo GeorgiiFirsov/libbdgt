@@ -5,6 +5,13 @@ use chrono;
 pub type Id = usize;
 
 
+/// Identifier for primary keys in structure.
+/// 
+/// [`Option`] is required because new instances don't have
+/// an id at creation time.
+pub type PrimaryId = Option<Id>;
+
+
 /// Types of categories.
 #[derive(Clone, Copy, PartialEq)]
 pub enum CategoryType {
@@ -18,6 +25,9 @@ pub enum CategoryType {
 
 /// User-friendly transaction structure.
 pub struct Transaction {
+    /// Identifier
+    pub id: PrimaryId,
+
     /// Creation time
     pub datetime: chrono::DateTime<chrono::Utc>,
 
@@ -39,6 +49,7 @@ pub struct Transaction {
 /// 
 /// For fields description refer to [`Transaction`].
 pub struct EncryptedTransaction {
+    pub id: PrimaryId,
     pub datetime: chrono::DateTime<chrono::Utc>,
     pub description: Vec<u8>,
     pub category_id: Id,
@@ -49,6 +60,9 @@ pub struct EncryptedTransaction {
 
 /// User-friendly category structure.
 pub struct Category {
+    /// Identifier
+    pub id: PrimaryId,
+
     /// Name of the category
     pub name: String,
 
@@ -61,6 +75,7 @@ pub struct Category {
 /// 
 /// For fields description refer to [`Category`].
 pub struct EncryptedCategory {
+    pub id: PrimaryId,
     pub name: Vec<u8>,
     pub category_type: CategoryType,
 }
@@ -68,6 +83,9 @@ pub struct EncryptedCategory {
 
 /// User-friendly account structure.
 pub struct Account {
+    /// Identifier
+    pub id: PrimaryId,
+
     /// User-friendly account name
     pub name: String,
 
@@ -80,6 +98,7 @@ pub struct Account {
 /// 
 /// For fields description refer to [`Account`].
 pub struct EncryptedAccount {
+    pub id: PrimaryId,
     pub name: Vec<u8>,
     pub balance: Vec<u8>
 }
