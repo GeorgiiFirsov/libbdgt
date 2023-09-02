@@ -202,23 +202,23 @@ impl DbStorage {
     fn create_db(&self) -> Result<()> {
         let create_statement = r#"
             CREATE TABLE accounts (
-                account_id          SERIAL      PRIMARY KEY,
+                account_id          INTEGER     PRIMARY KEY AUTOINCREMENT,
                 current_balance     BYTEA       NOT NULL,
                 name                BYTEA       NOT NULL
             );
                 
             CREATE TABLE categories (
-                category_id         SERIAL      PRIMARY KEY,
+                category_id         INTEGER     PRIMARY KEY AUTOINCREMENT,
                 name                BYTEA       NOT NULL,
                 type                TINYINT     NOT NULL
             );
                 
             CREATE TABLE transactions (
-                transaction_id      SERIAL      PRIMARY KEY,
+                transaction_id      INTEGER     PRIMARY KEY AUTOINCREMENT,
                 timestamp           DATETIME    NOT NULL,
                 description         BYTEA       NOT NULL,    
-                account_id          SERIAL      REFERENCES accounts(account_id),
-                category_id         SERIAL      REFERENCES categories(category_id),
+                account_id          INTEGER     REFERENCES accounts(account_id),
+                category_id         INTEGER     REFERENCES categories(category_id),
                 amount              BYTEA       NOT NULL
             );
         "#;
