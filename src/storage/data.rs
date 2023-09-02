@@ -13,7 +13,7 @@ pub type PrimaryId = Option<Id>;
 
 
 /// Types of categories.
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum CategoryType {
     /// Incomes
     Income,
