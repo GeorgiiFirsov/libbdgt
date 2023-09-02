@@ -60,11 +60,9 @@ where
 
     /// Add a new transaction.
     /// 
-    /// * `account` - identifier of account to add transaction to
     /// * `transaction` - protected transaction data
-    pub fn add_transaction(&self, account: Id, transaction: Transaction) -> Result<()> {
-        let encrypted_transaction = self.encrypt_transaction(&transaction)?;
-        self.storage.add_transaction(account, encrypted_transaction)
+    pub fn add_transaction(&self, transaction: Transaction) -> Result<()> {
+        self.storage.add_transaction(self.encrypt_transaction(&transaction)?)
     }
 
     /// Remove transaction.
@@ -100,8 +98,7 @@ where
     /// 
     /// * `account` - protected account data
     pub fn add_account(&self, account: Account) -> Result<()> {
-        let encrypted_account = self.encrypt_account(&account)?;
-        self.storage.add_account(encrypted_account)
+        self.storage.add_account(self.encrypt_account(&account)?)
     }
 
     /// Remove an account if possible (or forced).
@@ -127,8 +124,7 @@ where
     /// 
     /// * `category` - protected category data
     pub fn add_category(&self, category: Category) -> Result<()> {
-        let encrypted_category = self.encrypt_category(&category)?;
-        self.storage.add_category(encrypted_category)
+        self.storage.add_category(self.encrypt_category(&category)?)
     }
 
     /// Remove category if possible.

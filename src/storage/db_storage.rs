@@ -48,7 +48,7 @@ impl DbStorage {
 
 
 impl DataStorage for DbStorage {
-    fn add_transaction(&self, account: Id, transaction: EncryptedTransaction) -> Result<()> {
+    fn add_transaction(&self, transaction: EncryptedTransaction) -> Result<()> {
         Ok(())
     }
 

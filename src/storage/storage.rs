@@ -6,9 +6,8 @@ use super::data::{EncryptedTransaction, EncryptedCategory, EncryptedAccount, Id}
 pub trait DataStorage {
     /// Add a new transaction.
     /// 
-    /// * `account` - identifier of account to add transaction to
     /// * `transaction` - protected transaction data
-    fn add_transaction(&self, account: Id, transaction: EncryptedTransaction) -> Result<()>;
+    fn add_transaction(&self, transaction: EncryptedTransaction) -> Result<()>;
 
     /// Remove transaction.
     /// 
