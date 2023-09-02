@@ -72,22 +72,9 @@ where
         self.storage.remove_transaction(transaction)
     }
 
-    // Return all transactions, that belong to a specific account.
-    /// 
-    /// * `account` - identifier of account to list transactions of
-    pub fn transactions_of(&self, account: Id) -> Result<Vec<Transaction>> {
-        let encrypted_transactions = self.storage.transactions_of(account)?;
-        encrypted_transactions
-            .iter()
-            .map(|t| self.decrypt_transaction(t))
-            .collect()
-    }
-
-    /// Return all transactions, that have a specific category.
-    /// 
-    /// * `category` - identifier of category to list transactions with
-    pub fn transactions_with(&self, category: Id) -> Result<Vec<Transaction>> {
-        let encrypted_transactions: Vec<EncryptedTransaction> = self.storage.transactions_with(category)?;
+    // Return all transactions.
+    pub fn transactions(&self) -> Result<Vec<Transaction>> {
+        let encrypted_transactions = self.storage.transactions()?;
         encrypted_transactions
             .iter()
             .map(|t| self.decrypt_transaction(t))

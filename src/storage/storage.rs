@@ -14,15 +14,8 @@ pub trait DataStorage {
     /// * `transaction` - identifier of a transaction to remove
     fn remove_transaction(&self, transaction: Id) -> Result<()>;
 
-    /// Return all transactions, that belong to a specific account.
-    /// 
-    /// * `account` - identifier of account to list transactions of
-    fn transactions_of(&self, account: Id) -> Result<Vec<EncryptedTransaction>>;
-
-    /// Return all transactions, that have a specific category.
-    /// 
-    /// * `category` - identifier of category to list transactions with
-    fn transactions_with(&self, category: Id) -> Result<Vec<EncryptedTransaction>>;
+    /// Return all transactions.
+    fn transactions(&self) -> Result<Vec<EncryptedTransaction>>;
 
     /// Add a new account.
     /// 
