@@ -249,6 +249,7 @@ impl DbStorage {
     }
 }
 
+
 impl DbStorage {
     fn category_from_row(row: &rusqlite::Row<'_>) -> Result<EncryptedCategory> {
         Ok(EncryptedCategory { 
