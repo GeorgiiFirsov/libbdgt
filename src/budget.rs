@@ -62,13 +62,37 @@ where
     /// 
     /// * `transaction` - protected transaction data
     pub fn add_transaction(&self, transaction: Transaction) -> Result<()> {
-        self.storage.add_transaction(self.encrypt_transaction(&transaction)?)
+        //
+        // Amount is considered to have a proper sign,
+        // so I just add it to a corresponding account's
+        // balance
+        //
+
+        let mut decrypted_account = self.decrypt_account(
+            &self.storage.account(transaction.account_id)?)?;
+
+        decrypted_account.balance += transaction.amount;
+
+        //
+        // Well... It would be better to use DB's transactions here,
+        // but it is more complicated though. 
+        // If transaction will not be added, account will not be modified.
+        // If account update fails, one can just remove bad transaction
+        // with `emergency` flag set to `true`.
+        //
+
+        self.storage.add_transaction(self.encrypt_transaction(&transaction)?)?;
+        self.storage.update_account(self.encrypt_account(&decrypted_account)?)
     }
 
     /// Remove transaction.
     /// 
     /// * `transaction` - identifier of a transaction to remove
-    pub fn remove_transaction(&self, transaction: Id) -> Result<()> {
+    pub fn remove_transaction(&self, transaction: Id, emergency: bool) -> Result<()> {
+        //
+        // TODO: implement account update
+        //
+
         self.storage.remove_transaction(transaction)
     }
 
