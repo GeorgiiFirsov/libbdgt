@@ -125,6 +125,83 @@ impl DataStorage for DbStorage {
         self.query_with_params(statement_fmt, rusqlite::params![start_timestamp], Self::transaction_from_row)
     }
 
+    fn transactions_between(&self, start_timestamp: super::Timestamp, end_timestamp: super::Timestamp) -> Result<Vec<EncryptedTransaction>> {
+        let statement_fmt = r#"
+            SELECT transaction_id, timestamp, description, account_id, category_id, amount
+              FROM transactions
+             WHERE timestamp >= ?1 AND 
+                   timestamp < ?2
+        "#;
+
+        self.query_with_params(statement_fmt, rusqlite::params![start_timestamp, end_timestamp], Self::transaction_from_row)
+    }
+
+    fn transactions_of(&self, account: Id) -> Result<Vec<EncryptedTransaction>> {
+        let statement_fmt = r#"
+            SELECT transaction_id, timestamp, description, account_id, category_id, amount
+              FROM transactions
+             WHERE account_id = ?1
+        "#;
+
+        self.query_with_params(statement_fmt, rusqlite::params![account], Self::transaction_from_row)
+    }
+
+    fn transactions_of_after(&self, account: Id, start_timestamp: super::Timestamp) -> Result<Vec<EncryptedTransaction>> {
+        let statement_fmt = r#"
+            SELECT transaction_id, timestamp, description, account_id, category_id, amount
+              FROM transactions
+             WHERE account_id = ?1 AND
+                   timestamp >= ?2
+        "#;
+
+        self.query_with_params(statement_fmt, rusqlite::params![account, start_timestamp], Self::transaction_from_row)
+    }
+
+    fn transactions_of_between(&self, account: Id, start_timestamp: super::Timestamp, end_timestamp: super::Timestamp) -> Result<Vec<EncryptedTransaction>> {
+        let statement_fmt = r#"
+            SELECT transaction_id, timestamp, description, account_id, category_id, amount
+              FROM transactions
+             WHERE account_id = ?1 AND
+                   timestamp >= ?2 AND
+                   timestamp < ?3
+        "#;
+
+        self.query_with_params(statement_fmt, rusqlite::params![account, start_timestamp, end_timestamp], Self::transaction_from_row)
+    }
+
+    fn transactions_with(&self, category: Id) -> Result<Vec<EncryptedTransaction>> {
+        let statement_fmt = r#"
+            SELECT transaction_id, timestamp, description, account_id, category_id, amount
+              FROM transactions
+             WHERE category_id = ?1
+        "#;
+
+        self.query_with_params(statement_fmt, rusqlite::params![category], Self::transaction_from_row)
+    }
+
+    fn transactions_with_after(&self, category: Id, start_timestamp: super::Timestamp) -> Result<Vec<EncryptedTransaction>> {
+        let statement_fmt = r#"
+            SELECT transaction_id, timestamp, description, account_id, category_id, amount
+              FROM transactions
+             WHERE category_id = ?1 AND
+                   timestamp >= ?2
+        "#;
+
+        self.query_with_params(statement_fmt, rusqlite::params![category, start_timestamp], Self::transaction_from_row)
+    }
+
+    fn transactions_with_between(&self, category: Id, start_timestamp: super::Timestamp, end_timestamp: super::Timestamp) -> Result<Vec<EncryptedTransaction>> {
+        let statement_fmt = r#"
+            SELECT transaction_id, timestamp, description, account_id, category_id, amount
+              FROM transactions
+             WHERE category_id = ?1 AND
+                   timestamp >= ?2 AND
+                   timestamp < ?3
+        "#;
+
+        self.query_with_params(statement_fmt, rusqlite::params![category, start_timestamp, end_timestamp], Self::transaction_from_row)
+    }
+
     fn add_account(&self, account: EncryptedAccount) -> Result<()> {
         let statement_fmt = r#"
             INSERT INTO accounts (name, balance)

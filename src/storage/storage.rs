@@ -21,8 +21,69 @@ pub trait DataStorage {
     /// 
     /// Used for optimization.
     /// 
-    /// * `start_timestamp` - point in time to start from.
+    /// * `start_timestamp` - point in time to start from
     fn transactions_after(&self, start_timestamp: Timestamp) -> Result<Vec<EncryptedTransaction>>;
+
+    /// Return all transactions between a given time points (including start 
+    /// of the interval and excluding the end).
+    /// 
+    /// Used for optimization.
+    /// 
+    /// * `start_timestamp` - point in time to start from
+    /// * `end_timestamp` - point in time to end before
+    fn transactions_between(&self, start_timestamp: Timestamp, end_timestamp: Timestamp) -> Result<Vec<EncryptedTransaction>>;
+
+    /// Return all transactions bound with a given account.
+    /// 
+    /// Used for optimization.
+    /// 
+    /// * `account` - account identifier to return transactions for
+    fn transactions_of(&self, account: Id) -> Result<Vec<EncryptedTransaction>>;
+
+    /// Return all transactions starting from a given time point bound with 
+    /// a given account.
+    /// 
+    /// Used for optimization.
+    /// 
+    /// * `account` - account identifier to return transactions for
+    /// * `start_timestamp` - point in time to start from
+    fn transactions_of_after(&self, account: Id, start_timestamp: Timestamp) -> Result<Vec<EncryptedTransaction>>;
+
+    /// Return all transactions between a given time points (including start 
+    /// of the interval and excluding the end) bound with a given account.
+    /// 
+    /// Used for optimization.
+    /// 
+    /// * `account` - account identifier to return transactions for
+    /// * `start_timestamp` - point in time to start from
+    /// * `end_timestamp` - point in time to end before
+    fn transactions_of_between(&self, account: Id, start_timestamp: Timestamp, end_timestamp: Timestamp) -> Result<Vec<EncryptedTransaction>>;
+
+    /// Return all transactions with given category.
+    /// 
+    /// Used for optimization.
+    /// 
+    /// * `category` - category to return transactions with
+    fn transactions_with(&self, category: Id) -> Result<Vec<EncryptedTransaction>>;
+
+    /// Return all transactions starting from a given time point and with 
+    /// given category.
+    /// 
+    /// Used for optimization.
+    /// 
+    /// * `category` - category to return transactions with
+    /// * `start_timestamp` - point in time to start from
+    fn transactions_with_after(&self, category: Id, start_timestamp: Timestamp) -> Result<Vec<EncryptedTransaction>>;
+
+    /// Return all transactions between a given time points (including start 
+    /// of the interval and excluding the end) and with given category.
+    /// 
+    /// Used for optimization.
+    /// 
+    /// * `category` - category to return transactions with
+    /// * `start_timestamp` - point in time to start from
+    /// * `end_timestamp` - point in time to end before
+    fn transactions_with_between(&self, category: Id, start_timestamp: Timestamp, end_timestamp: Timestamp) -> Result<Vec<EncryptedTransaction>>;
 
     /// Add a new account.
     /// 
