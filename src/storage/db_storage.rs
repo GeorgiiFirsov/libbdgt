@@ -106,6 +106,23 @@ impl DataStorage for DbStorage {
         Ok(())
     }
 
+    fn transaction(&self, transaction: Id) -> Result<EncryptedTransaction> {
+        let statement_fmt = r#"
+            SELECT transaction_id, timestamp, description, account_id, category_id, amount
+              FROM transactions
+             WHERE transaction_id = ?1
+        "#;
+
+        let result = self.query_with_params(statement_fmt, 
+            rusqlite::params![transaction], Self::transaction_from_row)?;
+
+        //
+        // The only row is returned here
+        //
+
+        Ok(result[0].clone())
+    }
+
     fn transactions(&self) -> Result<Vec<EncryptedTransaction>> {
         let statement = r#"
             SELECT transaction_id, timestamp, description, account_id, category_id, amount

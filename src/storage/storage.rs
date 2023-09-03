@@ -14,6 +14,11 @@ pub trait DataStorage {
     /// * `transaction` - identifier of a transaction to remove
     fn remove_transaction(&self, transaction: Id) -> Result<()>;
 
+    /// Return transaction with a given identifier.
+    /// 
+    /// * `transaction` - identifier to return record for
+    fn transaction(&self, transaction: Id) -> Result<EncryptedTransaction>;
+
     /// Return all transactions.
     fn transactions(&self) -> Result<Vec<EncryptedTransaction>>;
 
