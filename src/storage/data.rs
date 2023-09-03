@@ -52,6 +52,7 @@ pub struct Transaction {
 /// Protected transaction structure.
 /// 
 /// For fields description refer to [`Transaction`].
+#[derive(Clone)]
 pub struct EncryptedTransaction {
     pub id: PrimaryId,
     pub timestamp: Timestamp,
@@ -78,6 +79,7 @@ pub struct Category {
 /// Protected category structure.
 /// 
 /// For fields description refer to [`Category`].
+#[derive(Clone)]
 pub struct EncryptedCategory {
     pub id: PrimaryId,
     pub name: Vec<u8>,
@@ -101,6 +103,7 @@ pub struct Account {
 /// Protected account structure.
 /// 
 /// For fields description refer to [`Account`].
+#[derive(Clone)]
 pub struct EncryptedAccount {
     pub id: PrimaryId,
     pub name: Vec<u8>,

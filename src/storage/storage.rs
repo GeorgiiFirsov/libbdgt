@@ -98,6 +98,11 @@ pub trait DataStorage {
     /// * `force` - if true, then account is deleted anyway with all of its transactions
     fn remove_account(&self, account: Id, force: bool) -> Result<()>;
 
+    /// Return account with a given identifier.
+    /// 
+    /// * `account` - identifier to return record for
+    fn account(&self, account: Id) -> Result<EncryptedAccount>;
+
     /// Return all accounts.
     fn accounts(&self) -> Result<Vec<EncryptedAccount>>;
 
@@ -114,6 +119,11 @@ pub trait DataStorage {
     /// 
     /// * `category` - identifier of category to remove
     fn remove_category(&self, category: Id) -> Result<()>;
+
+    /// Return category with a given identifier.
+    /// 
+    /// * `category` - identifier to return record for
+    fn category(&self, category: Id) -> Result<EncryptedCategory>;
 
     /// Return all categories.
     fn categories(&self) -> Result<Vec<EncryptedCategory>>;

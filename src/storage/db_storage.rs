@@ -241,6 +241,23 @@ impl DataStorage for DbStorage {
         Ok(())
     }
 
+    fn account(&self, account: Id) -> Result<EncryptedAccount> {
+        let statement_fmt = r#"
+            SELECT account_id, name, balance
+              FROM accounts
+             WHERE account_id = ?1
+        "#;
+
+        let result = self.query_with_params(statement_fmt, 
+            rusqlite::params![account], Self::account_from_row)?;
+
+        //
+        // The only row is returned here
+        //
+
+        Ok(result[0].clone())
+    }
+
     fn accounts(&self) -> Result<Vec<EncryptedAccount>> {
         let statement = r#"
             SELECT account_id, name, balance
@@ -272,6 +289,23 @@ impl DataStorage for DbStorage {
             .execute(statement_fmt, rusqlite::params![category])?;
 
         Ok(())
+    }
+
+    fn category(&self, category: Id) -> Result<EncryptedCategory> {
+        let statement_fmt = r#"
+            SELECT category_id, name, type 
+              FROM categories
+             WHERE category_id = ?1
+        "#;
+
+        let result = self.query_with_params(statement_fmt, 
+            rusqlite::params![category], Self::category_from_row)?;
+        
+        //
+        // The only row is returned here
+        //
+
+        Ok(result[0].clone())
     }
 
     fn categories(&self) -> Result<Vec<EncryptedCategory>> {
