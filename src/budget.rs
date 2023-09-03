@@ -79,6 +79,7 @@ where
         // If transaction will not be added, account will not be modified.
         // If account update fails, one can just remove bad transaction
         // with `emergency` flag set to `true`.
+        // Hence there is a way to restore consistency.
         //
 
         self.storage.add_transaction(self.encrypt_transaction(&transaction)?)?;
@@ -89,9 +90,31 @@ where
     /// 
     /// * `transaction` - identifier of a transaction to remove
     pub fn remove_transaction(&self, transaction: Id, emergency: bool) -> Result<()> {
-        //
-        // TODO: implement account update
-        //
+        if !emergency {
+            //
+            // Here is the same story: it would be probably better to use
+            // DB's transactions, but it is not the way here.
+            // If account is not updated, transaction will not be added.
+            // If transaction is not removed, but account is updated yet,
+            // one can remove transaction with `emergency` flag set.
+            // Hence there is a way to restore consistency.
+            //
+
+            let decrypted_transaction = self.decrypt_transaction(
+                &self.storage.transaction(transaction)?)?;
+
+            let mut decrypted_account = self.decrypt_account(
+                &self.storage.account(decrypted_transaction.account_id)?)?;
+
+            //
+            // Again, amount in transaction is considered to have a proper sign,
+            // hence I just subtract it from account's balance
+            //
+
+            decrypted_account.balance -= decrypted_transaction.amount;
+
+            self.storage.update_account(self.encrypt_account(&decrypted_account)?)?;
+        }
 
         self.storage.remove_transaction(transaction)
     }
