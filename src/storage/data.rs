@@ -12,6 +12,10 @@ pub type Id = usize;
 pub type PrimaryId = Option<Id>;
 
 
+/// Type of timestamps.
+pub type Timestamp = chrono::DateTime<chrono::Utc>;
+
+
 /// Types of categories.
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum CategoryType {
@@ -29,7 +33,7 @@ pub struct Transaction {
     pub id: PrimaryId,
 
     /// Creation time
-    pub datetime: chrono::DateTime<chrono::Utc>,
+    pub timestamp: Timestamp,
 
     /// Brief description
     pub description: String,
@@ -50,7 +54,7 @@ pub struct Transaction {
 /// For fields description refer to [`Transaction`].
 pub struct EncryptedTransaction {
     pub id: PrimaryId,
-    pub datetime: chrono::DateTime<chrono::Utc>,
+    pub timestamp: Timestamp,
     pub description: Vec<u8>,
     pub category_id: Id,
     pub account_id: Id,

@@ -88,7 +88,7 @@ impl DataStorage for DbStorage {
         "#;
 
         self.db
-            .execute(statement_fmt, rusqlite::params![transaction.datetime, transaction.description, 
+            .execute(statement_fmt, rusqlite::params![transaction.timestamp, transaction.description, 
                 transaction.account_id, transaction.category_id, transaction.amount])?;
         
         Ok(())
@@ -113,6 +113,16 @@ impl DataStorage for DbStorage {
         "#;
 
         self.query(statement, Self::transaction_from_row)
+    }
+
+    fn transactions_after(&self, start_timestamp: super::Timestamp) -> Result<Vec<EncryptedTransaction>> {
+        let statement_fmt = r#"
+            SELECT transaction_id, timestamp, description, account_id, category_id, amount
+              FROM transactions
+             WHERE timestamp >= ?1
+        "#;
+
+        self.query_with_params(statement_fmt, rusqlite::params![start_timestamp], Self::transaction_from_row)
     }
 
     fn add_account(&self, account: EncryptedAccount) -> Result<()> {
@@ -233,19 +243,27 @@ impl DbStorage {
             .join("database")
     }
 
-    fn query<T, P>(&self, statement: &str, parse: P) -> Result<Vec<T>>
+    fn query_with_params<T, P, C>(&self, statement: &str, params: P, convert: C) -> Result<Vec<T>>
     where
-        P: Fn(&rusqlite::Row<'_>) -> Result<T>
+        P: rusqlite::Params,
+        C: Fn(&rusqlite::Row<'_>) -> Result<T>
     {
         let mut statement = self.db.prepare(statement)?;
-        let mut rows = statement.query([])?;
+        let mut rows = statement.query(params)?;
 
         let mut result = Vec::new();
         while let Some(row) = rows.next()? {
-            result.push(parse(row)?)
+            result.push(convert(row)?)
         }
 
         Ok(result)
+    }
+
+    fn query<T, C>(&self, statement: &str, convert: C) -> Result<Vec<T>>
+    where
+        C: Fn(&rusqlite::Row<'_>) -> Result<T>
+    {
+        self.query_with_params(statement, [], convert)
     }
 }
 
@@ -270,7 +288,7 @@ impl DbStorage {
     fn transaction_from_row(row: &rusqlite::Row<'_>) -> Result<EncryptedTransaction> {
         Ok(EncryptedTransaction { 
             id: row.get(0)?, 
-            datetime: row.get(1)?, 
+            timestamp: row.get(1)?, 
             description: row.get(2)?, 
             category_id: row.get(3)?, 
             account_id: row.get(4)?, 

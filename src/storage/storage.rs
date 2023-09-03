@@ -1,5 +1,5 @@
 use crate::error::Result;
-use super::data::{EncryptedTransaction, EncryptedCategory, EncryptedAccount, Id};
+use super::data::{EncryptedTransaction, EncryptedCategory, EncryptedAccount, Id, Timestamp};
 
 
 /// Storage trait, that provides protected data reading and writing.
@@ -16,6 +16,13 @@ pub trait DataStorage {
 
     /// Return all transactions.
     fn transactions(&self) -> Result<Vec<EncryptedTransaction>>;
+
+    /// Return all transactions starting from a given time point.
+    /// 
+    /// Used for optimization.
+    /// 
+    /// * `start_timestamp` - point in time to start from.
+    fn transactions_after(&self, start_timestamp: Timestamp) -> Result<Vec<EncryptedTransaction>>;
 
     /// Add a new account.
     /// 

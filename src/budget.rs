@@ -180,7 +180,7 @@ where
 
         Ok(EncryptedTransaction {
             id: transaction.id,
-            datetime: transaction.datetime,
+            timestamp: transaction.timestamp,
             description: encrypted_description.as_raw().into(),
             category_id: transaction.category_id,
             account_id: transaction.account_id,
@@ -194,7 +194,7 @@ where
 
         Ok(Transaction {
             id: encrypted_transaction.id,
-            datetime: encrypted_transaction.datetime,
+            timestamp: encrypted_transaction.timestamp,
             description: decrypted_description,
             category_id: encrypted_transaction.category_id,
             account_id: encrypted_transaction.account_id,
