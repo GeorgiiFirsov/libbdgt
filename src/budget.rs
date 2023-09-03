@@ -3,7 +3,7 @@ use std::array::TryFromSliceError;
 use crate::crypto::{CryptoEngine, KeyIdentifier, CryptoBuffer};
 use crate::config::Config;
 use crate::error::{Result, Error};
-use crate::storage::{EncryptedTransaction, EncryptedAccount, EncryptedCategory};
+use super::storage::{EncryptedTransaction, EncryptedAccount, EncryptedCategory};
 use super::storage::{DataStorage, Id, Transaction, Account, Category};
 
 
