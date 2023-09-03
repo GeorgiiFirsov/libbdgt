@@ -90,6 +90,11 @@ pub trait DataStorage {
     /// * `account` - protected account data
     fn add_account(&self, account: EncryptedAccount) -> Result<()>;
 
+    /// Update account.
+    /// 
+    /// * `account` - account to update (with updated data)
+    fn update_account(&self, account: EncryptedAccount) -> Result<()>;
+
     /// Remove an account if possible (or forced).
     /// 
     /// If account has transaction and `force` is false, then this function fails.
@@ -110,6 +115,11 @@ pub trait DataStorage {
     /// 
     /// * `category` - protected category data
     fn add_category(&self, category: EncryptedCategory) -> Result<()>;
+
+    /// Update category.
+    /// 
+    /// * `category` - category to update (with updated data)
+    fn update_category(&self, category: EncryptedCategory) -> Result<()>;
 
     /// Remove category if possible.
     /// 

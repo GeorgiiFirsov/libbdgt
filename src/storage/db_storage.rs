@@ -214,6 +214,20 @@ impl DataStorage for DbStorage {
         Ok(())
     }
 
+    fn update_account(&self, account: EncryptedAccount) -> Result<()> {
+        let statement_fmt = r#"
+            UPDATE accounts
+               SET name = ?1,
+                   balance = ?2
+             WHERE account_id = ?3
+        "#;
+
+        self.db
+            .execute(statement_fmt, rusqlite::params![account.name, account.balance, account.id])?;
+
+        Ok(())
+    }
+
     fn remove_account(&self, account: Id, force: bool) -> Result<()> {
         if force {
             //
@@ -275,6 +289,20 @@ impl DataStorage for DbStorage {
 
         self.db
             .execute(statement_fmt, rusqlite::params![category.name, category.category_type])?;
+
+        Ok(())
+    }
+
+    fn update_category(&self, category: EncryptedCategory) -> Result<()> {
+        let statement_fmt = r#"
+            UPDATE categories
+               SET name = ?1,
+                   type = ?2
+             WHERE category_id = ?3
+        "#;
+
+        self.db
+            .execute(statement_fmt, rusqlite::params![category.name, category.category_type, category.id])?;
 
         Ok(())
     }
