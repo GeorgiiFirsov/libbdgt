@@ -8,10 +8,10 @@ use super::data::{EncryptedTransaction, EncryptedCategory, EncryptedAccount, Id,
 use super::storage::DataStorage;
 
 
-/// Implementation of [`rusqlite::ToSql`] trait for [`CategoryType`].
+/// Implementation of [`rusqlite::types::ToSql`] trait for [`CategoryType`].
 /// 
 /// [`CategoryType::Income`] translates into 0, [`CategoryType::Outcome`] -- into 1.
-impl rusqlite::ToSql for CategoryType {
+impl rusqlite::types::ToSql for CategoryType {
     fn to_sql(&self) -> rusqlite::Result<rusqlite::types::ToSqlOutput<'_>> {
         let internal_value = match self {
             CategoryType::Income  => 0i64,
