@@ -127,6 +127,7 @@ impl DataStorage for DbStorage {
         let statement = r#"
             SELECT transaction_id, timestamp, description, account_id, category_id, amount
               FROM transactions
+             ORDER BY timestamp DESC
         "#;
 
         self.query(statement, Self::transaction_from_row)
@@ -137,6 +138,7 @@ impl DataStorage for DbStorage {
             SELECT transaction_id, timestamp, description, account_id, category_id, amount
               FROM transactions
              WHERE timestamp >= ?1
+             ORDER BY timestamp DESC
         "#;
 
         self.query_with_params(statement_fmt, rusqlite::params![start_timestamp], Self::transaction_from_row)
@@ -148,6 +150,7 @@ impl DataStorage for DbStorage {
               FROM transactions
              WHERE timestamp >= ?1 AND 
                    timestamp < ?2
+             ORDER BY timestamp DESC
         "#;
 
         self.query_with_params(statement_fmt, rusqlite::params![start_timestamp, end_timestamp], Self::transaction_from_row)
@@ -158,6 +161,7 @@ impl DataStorage for DbStorage {
             SELECT transaction_id, timestamp, description, account_id, category_id, amount
               FROM transactions
              WHERE account_id = ?1
+             ORDER BY timestamp DESC
         "#;
 
         self.query_with_params(statement_fmt, rusqlite::params![account], Self::transaction_from_row)
@@ -169,6 +173,7 @@ impl DataStorage for DbStorage {
               FROM transactions
              WHERE account_id = ?1 AND
                    timestamp >= ?2
+             ORDER BY timestamp DESC
         "#;
 
         self.query_with_params(statement_fmt, rusqlite::params![account, start_timestamp], Self::transaction_from_row)
@@ -181,6 +186,7 @@ impl DataStorage for DbStorage {
              WHERE account_id = ?1 AND
                    timestamp >= ?2 AND
                    timestamp < ?3
+             ORDER BY timestamp DESC
         "#;
 
         self.query_with_params(statement_fmt, rusqlite::params![account, start_timestamp, end_timestamp], Self::transaction_from_row)
@@ -191,6 +197,7 @@ impl DataStorage for DbStorage {
             SELECT transaction_id, timestamp, description, account_id, category_id, amount
               FROM transactions
              WHERE category_id = ?1
+             ORDER BY timestamp DESC
         "#;
 
         self.query_with_params(statement_fmt, rusqlite::params![category], Self::transaction_from_row)
@@ -202,6 +209,7 @@ impl DataStorage for DbStorage {
               FROM transactions
              WHERE category_id = ?1 AND
                    timestamp >= ?2
+             ORDER BY timestamp DESC
         "#;
 
         self.query_with_params(statement_fmt, rusqlite::params![category, start_timestamp], Self::transaction_from_row)
@@ -214,6 +222,7 @@ impl DataStorage for DbStorage {
              WHERE category_id = ?1 AND
                    timestamp >= ?2 AND
                    timestamp < ?3
+             ORDER BY timestamp DESC
         "#;
 
         self.query_with_params(statement_fmt, rusqlite::params![category, start_timestamp, end_timestamp], Self::transaction_from_row)
@@ -357,6 +366,7 @@ impl DataStorage for DbStorage {
         let statement = r#"
             SELECT category_id, name, type 
               FROM categories
+             ORDER BY type DESC
         "#;
 
         self.query(statement, Self::category_from_row)
@@ -387,6 +397,12 @@ impl DbStorage {
                 category_id     INTEGER     REFERENCES categories(category_id),
                 amount          BYTEA       NOT NULL
             );
+
+            CREATE INDEX transactions_by_timestamp
+                ON transactions (timestamp);
+
+            CREATE INDEX categories_by_type
+                ON categories (type);
         "#;
 
         self.db
