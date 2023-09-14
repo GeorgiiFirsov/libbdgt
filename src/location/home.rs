@@ -3,6 +3,7 @@ use std::fs;
 
 use dirs;
 
+use crate::error::Result;
 use super::location::Location;
 
 
@@ -30,7 +31,7 @@ impl Location for HomeLocation {
             .exists()
     }
 
-    fn create_if_absent(&self) -> crate::error::Result<()> {
+    fn create_if_absent(&self) -> Result<()> {
         if !self.exists() {
             fs::create_dir_all(self.root())?;
         }
