@@ -366,7 +366,7 @@ impl DataStorage for DbStorage {
         let statement = r#"
             SELECT category_id, name, type 
               FROM categories
-             ORDER BY type DESC
+             ORDER BY type
         "#;
 
         self.query(statement, Self::category_from_row)
@@ -376,6 +376,14 @@ impl DataStorage for DbStorage {
 
 impl DbStorage {
     fn create_db(&self) -> Result<()> {
+        //
+        // Database will contain table for each entity: transaction, 
+        // account and category.
+        // For optimization purposes categories table will be
+        // additionally indexed by its type, transactions table --
+        // by timestamp.
+        //
+
         let create_statement = r#"
             CREATE TABLE accounts (
                 account_id      INTEGER     PRIMARY KEY AUTOINCREMENT,

@@ -19,10 +19,11 @@ pub trait DataStorage {
     /// * `transaction` - identifier to return record for
     fn transaction(&self, transaction: Id) -> Result<EncryptedTransaction>;
 
-    /// Return all transactions.
+    /// Return all transactions sorted by timestamp in descending order.
     fn transactions(&self) -> Result<Vec<EncryptedTransaction>>;
 
-    /// Return all transactions starting from a given time point.
+    /// Return all transactions starting from a given time point sorted by 
+    /// timestamp in descending order.
     /// 
     /// Used for optimization.
     /// 
@@ -30,7 +31,8 @@ pub trait DataStorage {
     fn transactions_after(&self, start_timestamp: Timestamp) -> Result<Vec<EncryptedTransaction>>;
 
     /// Return all transactions between a given time points (including start 
-    /// of the interval and excluding the end).
+    /// of the interval and excluding the end) sorted by timestamp in 
+    /// descending order.
     /// 
     /// Used for optimization.
     /// 
@@ -38,7 +40,8 @@ pub trait DataStorage {
     /// * `end_timestamp` - point in time to end before
     fn transactions_between(&self, start_timestamp: Timestamp, end_timestamp: Timestamp) -> Result<Vec<EncryptedTransaction>>;
 
-    /// Return all transactions bound with a given account.
+    /// Return all transactions bound with a given account sorted by timestamp 
+    /// in descending order.
     /// 
     /// Used for optimization.
     /// 
@@ -46,7 +49,7 @@ pub trait DataStorage {
     fn transactions_of(&self, account: Id) -> Result<Vec<EncryptedTransaction>>;
 
     /// Return all transactions starting from a given time point bound with 
-    /// a given account.
+    /// a given account sorted by timestamp in descending order.
     /// 
     /// Used for optimization.
     /// 
@@ -55,7 +58,8 @@ pub trait DataStorage {
     fn transactions_of_after(&self, account: Id, start_timestamp: Timestamp) -> Result<Vec<EncryptedTransaction>>;
 
     /// Return all transactions between a given time points (including start 
-    /// of the interval and excluding the end) bound with a given account.
+    /// of the interval and excluding the end) bound with a given account 
+    /// sorted by timestamp in descending order.
     /// 
     /// Used for optimization.
     /// 
@@ -64,7 +68,8 @@ pub trait DataStorage {
     /// * `end_timestamp` - point in time to end before
     fn transactions_of_between(&self, account: Id, start_timestamp: Timestamp, end_timestamp: Timestamp) -> Result<Vec<EncryptedTransaction>>;
 
-    /// Return all transactions with given category.
+    /// Return all transactions with given category sorted by timestamp in
+    /// descending order.
     /// 
     /// Used for optimization.
     /// 
@@ -72,7 +77,7 @@ pub trait DataStorage {
     fn transactions_with(&self, category: Id) -> Result<Vec<EncryptedTransaction>>;
 
     /// Return all transactions starting from a given time point and with 
-    /// given category.
+    /// given category sorted by timestamp in descending order.
     /// 
     /// Used for optimization.
     /// 
@@ -81,7 +86,8 @@ pub trait DataStorage {
     fn transactions_with_after(&self, category: Id, start_timestamp: Timestamp) -> Result<Vec<EncryptedTransaction>>;
 
     /// Return all transactions between a given time points (including start 
-    /// of the interval and excluding the end) and with given category.
+    /// of the interval and excluding the end) and with given category 
+    /// sorted by timestamp in descending order.
     /// 
     /// Used for optimization.
     /// 
@@ -140,6 +146,6 @@ pub trait DataStorage {
     /// * `category` - identifier to return record for
     fn category(&self, category: Id) -> Result<EncryptedCategory>;
 
-    /// Return all categories.
+    /// Return all categories sorted by type.
     fn categories(&self) -> Result<Vec<EncryptedCategory>>;
 }
