@@ -4,7 +4,7 @@ use crate::crypto::{CryptoEngine, KeyIdentifier, CryptoBuffer};
 use crate::config::Config;
 use crate::error::{Result, Error};
 use super::storage::{EncryptedTransaction, EncryptedAccount, EncryptedCategory};
-use super::storage::{DataStorage, Id, Transaction, Account, Category};
+use super::storage::{DataStorage, Id, Transaction, Account, Category, CategoryType};
 
 
 /// Budget manager.
@@ -175,6 +175,17 @@ where
     /// Return all categories.
     pub fn categories(&self) -> Result<Vec<Category>> {
         let encrypted_categories = self.storage.categories()?;
+        encrypted_categories
+            .iter()
+            .map(|c| self.decrypt_category(c))
+            .collect()
+    }
+
+    /// Return all categories of specific type.
+    /// 
+    /// * `category_type` - type to return categories of
+    pub fn categories_of(&self, category_type: CategoryType) -> Result<Vec<Category>> {
+        let encrypted_categories = self.storage.categories_of(category_type)?;
         encrypted_categories
             .iter()
             .map(|c| self.decrypt_category(c))
