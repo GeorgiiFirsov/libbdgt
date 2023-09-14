@@ -1,5 +1,5 @@
 use crate::error::Result;
-use super::data::{EncryptedTransaction, EncryptedCategory, EncryptedAccount, Id, Timestamp};
+use super::data::{EncryptedTransaction, EncryptedCategory, EncryptedAccount, Id, Timestamp, CategoryType};
 
 
 /// Storage trait, that provides protected data reading and writing.
@@ -148,4 +148,9 @@ pub trait DataStorage {
 
     /// Return all categories sorted by type.
     fn categories(&self) -> Result<Vec<EncryptedCategory>>;
+
+    /// Return all categories of specific type.
+    /// 
+    /// * `category_type` - type to return categories of
+    fn categories_of(&self, category_type: CategoryType) -> Result<Vec<EncryptedCategory>>;
 }

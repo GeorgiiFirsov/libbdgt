@@ -371,6 +371,17 @@ impl DataStorage for DbStorage {
 
         self.query(statement, Self::category_from_row)
     }
+
+    fn categories_of(&self, category_type: CategoryType) -> Result<Vec<EncryptedCategory>> {
+        let statement_fmt = r#"
+            SELECT category_id, name, type 
+              FROM categories
+             WHERE type = ?1
+             ORDER BY type
+        "#;
+
+        self.query_with_params(statement_fmt, rusqlite::params![category_type], Self::category_from_row)
+    }
 }
 
 
