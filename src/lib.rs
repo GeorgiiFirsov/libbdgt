@@ -5,6 +5,7 @@
 extern crate dirs;
 extern crate gpgme;
 extern crate chrono;
+extern crate anyhow;
 extern crate rusqlite;
 
 //

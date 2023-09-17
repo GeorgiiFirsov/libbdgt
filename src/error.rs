@@ -75,8 +75,7 @@ impl From<gpgme::Error> for Error {
 
 impl From<rusqlite::Error> for Error {
     fn from(value: rusqlite::Error) -> Self {
-        let msg = value
-            .to_string();
+        let msg = value.to_string();
 
         Error {
             msg: msg,
@@ -88,8 +87,19 @@ impl From<rusqlite::Error> for Error {
 
 impl From<io::Error> for Error {
     fn from(value: io::Error) -> Self {
-        let msg = value
-            .to_string();
+        let msg = value.to_string();
+
+        Error {
+            msg: msg,
+            extra: String::new()
+        }
+    }
+}
+
+
+impl From<anyhow::Error> for Error {
+    fn from(value: anyhow::Error) -> Self {
+        let msg = value.to_string();
 
         Error {
             msg: msg,
