@@ -2,7 +2,7 @@
 
 On the picture below logical ER-diagram of `libbdgt`'s database is shown.
 
-![Logical ER-diagram](../pictures/er-logical.drawio.png)
+![Logical ER-diagram](./pictures/er-logical.drawio.png)
 
 DB consists of 4 tables:
 - Accounts. This table contains information about user's bank accounts: 
@@ -20,4 +20,4 @@ DB consists of 4 tables:
 Physical ER-diagram of `libbdgt`'s DB demonstrates some low-level details 
 such as encrypted columns (of type `bytea`) and is shown below.
 
-![Physical ER-diagram](../pictures/er-physical.drawio.png)
+![Physical ER-diagram](./pictures/er-physical.drawio.png)
