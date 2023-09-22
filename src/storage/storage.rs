@@ -1,5 +1,5 @@
 use crate::error::Result;
-use super::data::{EncryptedTransaction, EncryptedCategory, EncryptedAccount, Id, Timestamp, CategoryType};
+use super::data::{EncryptedTransaction, EncryptedCategory, EncryptedAccount, EncryptedPlan, Id, Timestamp, CategoryType};
 
 
 /// Storage trait, that provides protected data reading and writing.
@@ -134,9 +134,9 @@ pub trait DataStorage {
 
     /// Remove category if possible.
     /// 
-    /// If there is at leas one transaction with the specified
+    /// If there is at leas one transaction and/or plan with the specified
     /// category, then this function fails. There is no way to
-    /// remove category with existing transactions.
+    /// remove category with existing transactions and/or plans.
     /// 
     /// * `category` - identifier of category to remove
     fn remove_category(&self, category: Id) -> Result<()>;
@@ -153,4 +153,32 @@ pub trait DataStorage {
     /// 
     /// * `category_type` - type to return categories of
     fn categories_of(&self, category_type: CategoryType) -> Result<Vec<EncryptedCategory>>;
+
+    /// Add a new plan.
+    /// 
+    /// * `plan` - protected plan data
+    fn add_plan(&self, plan: EncryptedPlan) -> Result<()>;
+
+    /// Update plan.
+    /// 
+    /// * `plan` - plan to update (with updated data)
+    fn update_plan(&self, plan: EncryptedPlan) -> Result<()>;
+
+    /// Remove plan.
+    /// 
+    /// * `plan` - identifier of plan to remove
+    fn remove_plan(&self, plan: Id) -> Result<()>;
+
+    /// Return plan with a given identifier.
+    /// 
+    /// * `plan` - identifier to return record for
+    fn plan(&self, plan: Id) -> Result<EncryptedPlan>;
+
+    /// Return all plans sorted by category.
+    fn plans(&self) -> Result<Vec<EncryptedPlan>>;
+
+    /// Return all plans for specific category.
+    /// 
+    /// * `category` - category to return plans for
+    fn plans_for(&self, category: Id) -> Result<Vec<EncryptedPlan>>;
 }

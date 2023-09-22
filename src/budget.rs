@@ -3,8 +3,8 @@ use std::array::TryFromSliceError;
 use crate::crypto::{CryptoEngine, KeyIdentifier, CryptoBuffer};
 use crate::config::Config;
 use crate::error::{Result, Error};
-use super::storage::{EncryptedTransaction, EncryptedAccount, EncryptedCategory};
-use super::storage::{DataStorage, Id, Transaction, Account, Category, CategoryType};
+use super::storage::{EncryptedTransaction, EncryptedAccount, EncryptedCategory, EncryptedPlan};
+use super::storage::{DataStorage, Id, Transaction, Account, Category, Plan, CategoryType};
 
 
 /// Budget manager.
@@ -60,7 +60,7 @@ where
 
     /// Add a new transaction.
     /// 
-    /// * `transaction` - protected transaction data
+    /// * `transaction` - transaction data
     pub fn add_transaction(&self, transaction: Transaction) -> Result<()> {
         //
         // Amount is considered to have a proper sign,
@@ -130,7 +130,7 @@ where
 
     /// Add a new account.
     /// 
-    /// * `account` - protected account data
+    /// * `account` - account data
     pub fn add_account(&self, account: Account) -> Result<()> {
         self.storage.add_account(self.encrypt_account(&account)?)
     }
@@ -156,7 +156,7 @@ where
 
     /// Add a new category.
     /// 
-    /// * `category` - protected category data
+    /// * `category` - category data
     pub fn add_category(&self, category: Category) -> Result<()> {
         self.storage.add_category(self.encrypt_category(&category)?)
     }
@@ -189,6 +189,40 @@ where
         encrypted_categories
             .iter()
             .map(|c| self.decrypt_category(c))
+            .collect()
+    }
+
+    /// Add a new plan.
+    /// 
+    /// * `plan` - plan data
+    fn add_plan(&self, plan: Plan) -> Result<()> {
+        self.storage.add_plan(self.encrypt_plan(&plan)?)
+    }
+
+    /// Remove plan.
+    /// 
+    /// * `plan` - identifier of plan to remove
+    fn remove_plan(&self, plan: Id) -> Result<()> {
+        self.storage.remove_plan(plan)
+    }
+
+    /// Return all plans sorted by category.
+    fn plans(&self) -> Result<Vec<Plan>> {
+        let encrypted_plans = self.storage.plans()?;
+        encrypted_plans
+            .iter()
+            .map(|p| self.decrypt_plan(p))
+            .collect()
+    }
+
+    /// Return all plans for specific category.
+    /// 
+    /// * `category` - category to return plans for
+    fn plans_for(&self, category: Id) -> Result<Vec<Plan>> {
+        let encrypted_plans = self.storage.plans_for(category)?;
+        encrypted_plans
+            .iter()
+            .map(|p| self.decrypt_plan(p))
             .collect()
     }
 }
@@ -299,6 +333,30 @@ where
             id: encrypted_category.id,
             name: decrypted_category, 
             category_type: encrypted_category.category_type
+        })
+    }
+
+    fn encrypt_plan(&self, plan: &Plan) -> Result<EncryptedPlan> {
+        let encrypted_name = self.encrypt_string(&plan.name)?;
+        let encrypted_amount_limit = self.encrypt_isize(&plan.amount_limit)?;
+
+        Ok(EncryptedPlan { 
+            id: plan.id, 
+            category_id: plan.category_id, 
+            name: encrypted_name.as_raw().into(), 
+            amount_limit: encrypted_amount_limit.as_raw().into()
+        })
+    }
+
+    fn decrypt_plan(&self, encrypted_plan: &EncryptedPlan) -> Result<Plan> {
+        let decrypted_name = self.decrypt_string(encrypted_plan.name.as_slice())?;
+        let decrypted_amount_limit = self.decrypt_isize(encrypted_plan.amount_limit.as_slice())?;
+
+        Ok(Plan { 
+            id: encrypted_plan.id, 
+            category_id: encrypted_plan.category_id, 
+            name: decrypted_name, 
+            amount_limit: decrypted_amount_limit 
         })
     }
 }

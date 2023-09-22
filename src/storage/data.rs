@@ -109,3 +109,31 @@ pub struct EncryptedAccount {
     pub name: Vec<u8>,
     pub balance: Vec<u8>
 }
+
+
+/// User-friendly plan structure.
+pub struct Plan {
+    /// Identifier
+    pub id: PrimaryId,
+
+    /// Identifier of corresponding category
+    pub category_id: Id,
+
+    /// User-friendly plan name
+    pub name: String,
+
+    /// Current plan balance
+    pub amount_limit: isize,
+}
+
+
+/// Protected plan structure.
+/// 
+/// For fields description refer to [`Plan`].
+#[derive(Clone)]
+pub struct EncryptedPlan {
+    pub id: PrimaryId,
+    pub category_id: Id,
+    pub name: Vec<u8>,
+    pub amount_limit: Vec<u8>
+}

@@ -4,7 +4,7 @@ use rusqlite;
 
 use crate::error::{Result, Error};
 use crate::location::Location;
-use super::data::{EncryptedTransaction, EncryptedCategory, EncryptedAccount, Id, CategoryType};
+use super::data::{EncryptedTransaction, EncryptedCategory, EncryptedAccount, EncryptedPlan, Id, CategoryType};
 use super::storage::DataStorage;
 
 
@@ -382,6 +382,82 @@ impl DataStorage for DbStorage {
 
         self.query_with_params(statement_fmt, rusqlite::params![category_type], Self::category_from_row)
     }
+
+    fn add_plan(&self, plan: EncryptedPlan) -> Result<()> {
+        let statement_fmt = r#"
+            INSERT INTO plans (category_id, name, amount_limit)
+            VALUES (?1, ?2, ?3)
+        "#;
+
+        self.db
+            .execute(statement_fmt, rusqlite::params![plan.category_id, plan.name, plan.amount_limit])?;
+
+        Ok(())
+    }
+
+    fn update_plan(&self, plan: EncryptedPlan) -> Result<()> {
+        let statement_fmt = r#"
+            UPDATE plans
+               SET category_id = ?1,
+                   name = ?2,
+                   amount_limit = ?3
+             WHERE plan_id = ?4
+        "#;
+
+        self.db
+            .execute(statement_fmt, rusqlite::params![plan.category_id, plan.name, plan.amount_limit, plan.id])?;
+
+        Ok(())
+    }
+
+    fn remove_plan(&self, plan: Id) -> Result<()> {
+        let statement_fmt = r#"
+            DELETE FROM plans
+             WHERE plan_id = ?1
+        "#;
+
+        self.db
+            .execute(statement_fmt, rusqlite::params![plan])?;
+
+        Ok(())
+    }
+
+    fn plan(&self, plan: Id) -> Result<EncryptedPlan> {
+        let statement_fmt = r#"
+            SELECT plan_id, category_id, name, amount_limit 
+              FROM plans
+             WHERE plan_id = ?1
+        "#;
+
+        let result = self.query_with_params(statement_fmt, 
+            rusqlite::params![plan], Self::plan_from_row)?;
+        
+        //
+        // The only row is returned here
+        //
+
+        Ok(result[0].clone())
+    }
+
+    fn plans(&self) -> Result<Vec<EncryptedPlan>> {
+        let statement = r#"
+            SELECT plan_id, category_id, name, amount_limit 
+              FROM plans
+             ORDER BY category_id
+        "#;
+
+        self.query(statement, Self::plan_from_row)
+    }
+
+    fn plans_for(&self, category: Id) -> Result<Vec<EncryptedPlan>> {
+        let statement_fmt = r#"
+            SELECT plan_id, category_id, name, amount_limit 
+              FROM plans
+             WHERE category_id = ?1
+        "#;
+
+        self.query_with_params(statement_fmt, rusqlite::params![category], Self::plan_from_row)
+    }
 }
 
 
@@ -389,10 +465,10 @@ impl DbStorage {
     fn create_db(&self) -> Result<()> {
         //
         // Database will contain table for each entity: transaction, 
-        // account and category.
+        // account, category and plan.
         // For optimization purposes categories table will be
         // additionally indexed by its type, transactions table --
-        // by timestamp.
+        // by timestamp, plans table -- by category.
         //
 
         let create_statement = r#"
@@ -417,11 +493,21 @@ impl DbStorage {
                 amount          BYTEA       NOT NULL
             );
 
+            CREATE TABLE plans (
+                plan_id         INTEGER     PRIMARY KEY AUTOINCREMENT,
+                category_id     INTEGER     REFERENCES categories(category_id),
+                name            BYTEA       NOT NULL,
+                amount_limit    BYTEA       NOT NULL
+            );
+
             CREATE INDEX transactions_by_timestamp
                 ON transactions (timestamp);
 
             CREATE INDEX categories_by_type
                 ON categories (type);
+
+            CREATE INDEX plans_by_category
+                ON plans(category_id);
         "#;
 
         self.db
@@ -484,6 +570,15 @@ impl DbStorage {
             category_id: row.get(3)?, 
             account_id: row.get(4)?, 
             amount: row.get(5)? 
+        })
+    }
+
+    fn plan_from_row(row: &rusqlite::Row<'_>) -> Result<EncryptedPlan> {
+        Ok(EncryptedPlan {
+            id: row.get(0)?,
+            category_id: row.get(1)?,
+            name: row.get(2)?,
+            amount_limit: row.get(3)?
         })
     }
 }
