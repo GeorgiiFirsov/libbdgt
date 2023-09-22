@@ -124,7 +124,7 @@ where
         let encrypted_transactions = self.storage.transactions()?;
         encrypted_transactions
             .iter()
-            .map(|t| self.decrypt_transaction(t))
+            .map(|transaction| self.decrypt_transaction(transaction))
             .collect()
     }
 
@@ -150,7 +150,7 @@ where
         let encrypted_accounts = self.storage.accounts()?;
         encrypted_accounts
             .iter()
-            .map(|a| self.decrypt_account(a))
+            .map(|account| self.decrypt_account(account))
             .collect()
     }
 
@@ -177,7 +177,7 @@ where
         let encrypted_categories = self.storage.categories()?;
         encrypted_categories
             .iter()
-            .map(|c| self.decrypt_category(c))
+            .map(|category| self.decrypt_category(category))
             .collect()
     }
 
@@ -188,7 +188,7 @@ where
         let encrypted_categories = self.storage.categories_of(category_type)?;
         encrypted_categories
             .iter()
-            .map(|c| self.decrypt_category(c))
+            .map(|category| self.decrypt_category(category))
             .collect()
     }
 
@@ -211,7 +211,7 @@ where
         let encrypted_plans = self.storage.plans()?;
         encrypted_plans
             .iter()
-            .map(|p| self.decrypt_plan(p))
+            .map(|plan| self.decrypt_plan(plan))
             .collect()
     }
 
@@ -222,7 +222,7 @@ where
         let encrypted_plans = self.storage.plans_for(category)?;
         encrypted_plans
             .iter()
-            .map(|p| self.decrypt_plan(p))
+            .map(|plan| self.decrypt_plan(plan))
             .collect()
     }
 }
