@@ -195,19 +195,19 @@ where
     /// Add a new plan.
     /// 
     /// * `plan` - plan data
-    fn add_plan(&self, plan: Plan) -> Result<()> {
+    pub fn add_plan(&self, plan: Plan) -> Result<()> {
         self.storage.add_plan(self.encrypt_plan(&plan)?)
     }
 
     /// Remove plan.
     /// 
     /// * `plan` - identifier of plan to remove
-    fn remove_plan(&self, plan: Id) -> Result<()> {
+    pub fn remove_plan(&self, plan: Id) -> Result<()> {
         self.storage.remove_plan(plan)
     }
 
     /// Return all plans sorted by category.
-    fn plans(&self) -> Result<Vec<Plan>> {
+    pub fn plans(&self) -> Result<Vec<Plan>> {
         let encrypted_plans = self.storage.plans()?;
         encrypted_plans
             .iter()
@@ -218,7 +218,7 @@ where
     /// Return all plans for specific category.
     /// 
     /// * `category` - category to return plans for
-    fn plans_for(&self, category: Id) -> Result<Vec<Plan>> {
+    pub fn plans_for(&self, category: Id) -> Result<Vec<Plan>> {
         let encrypted_plans = self.storage.plans_for(category)?;
         encrypted_plans
             .iter()
