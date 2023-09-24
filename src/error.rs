@@ -1,15 +1,18 @@
-use std::io;
-
 use gpgme;
 use rusqlite;
 
 
-/// Structure, that describes all errors in bdgt.
+/// Structure, that describes all errors in libbdgt.
 #[derive(Debug, PartialEq)]
 pub struct Error {
     msg: String,
     extra: String
 }
+
+
+/// Crate-specific alias for [`std::result::Result`] instantiated 
+/// with [`crate::error::Error`].
+pub type Result<T> = std::result::Result<T, Error>;
 
 
 impl Error {
@@ -59,10 +62,7 @@ impl std::error::Error for Error {
 
 impl From<gpgme::Error> for Error {
     fn from(value: gpgme::Error) -> Self {
-        let msg = value
-            .description()
-            .to_string();
-
+        let msg = value.to_string();
         let extra = format!("code: {}", value.code());
 
         Error { 
@@ -85,8 +85,8 @@ impl From<rusqlite::Error> for Error {
 }
 
 
-impl From<io::Error> for Error {
-    fn from(value: io::Error) -> Self {
+impl From<std::io::Error> for Error {
+    fn from(value: std::io::Error) -> Self {
         let msg = value.to_string();
 
         Error {
@@ -95,20 +95,3 @@ impl From<io::Error> for Error {
         }
     }
 }
-
-
-impl From<anyhow::Error> for Error {
-    fn from(value: anyhow::Error) -> Self {
-        let msg = value.to_string();
-
-        Error {
-            msg: msg,
-            extra: String::new()
-        }
-    }
-}
-
-
-/// Crate-specific alias for [`std::result::Result`] instantiated 
-/// with [`crate::error::Error`].
-pub type Result<T> = std::result::Result<T, Error>;
