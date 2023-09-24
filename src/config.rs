@@ -1,6 +1,3 @@
-use std::fs;
-use std::path;
-
 use crate::error::Result;
 use crate::location::Location;
 use crate::crypto::{KeyIdentifier, CryptoEngine};
@@ -26,7 +23,7 @@ where
     /// 
     /// * `loc` - storage location provider
     pub fn open<L: Location>(loc: &L) -> Result<Self> {
-        let raw_id = fs::read_to_string(Self::key_file(loc))?;
+        let raw_id = std::fs::read_to_string(Self::key_file(loc))?;
 
         Ok(Config { 
             key_id: Ce::KeyId::from_str(raw_id.as_str())
@@ -48,7 +45,7 @@ where
         // Save key into a file and then just open config :)
         //
 
-        fs::write(Self::key_file(loc), 
+        std::fs::write(Self::key_file(loc), 
             key_id.as_string())?;
 
         Self::open(loc)
@@ -66,7 +63,7 @@ where
     Ce: CryptoEngine,
     Ce::KeyId: KeyIdentifier
 {
-    fn key_file<L: Location>(loc: &L) -> path::PathBuf {
+    fn key_file<L: Location>(loc: &L) -> std::path::PathBuf {
         loc.root()
             .join("key")
     }

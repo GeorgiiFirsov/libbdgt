@@ -1,7 +1,3 @@
-use gpgme;
-use rusqlite;
-
-
 /// Structure, that describes all errors in libbdgt.
 #[derive(Debug, PartialEq)]
 pub struct Error {

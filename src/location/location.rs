@@ -1,12 +1,10 @@
-use std::path;
-
 use crate::error::Result;
 
 
 /// Traits, that manages application's data location.
 pub trait Location {
     /// Get root path of app's data location.
-    fn root(&self) -> path::PathBuf;
+    fn root(&self) -> std::path::PathBuf;
 
     /// Checks if root directory is present.
     fn exists(&self) -> bool;

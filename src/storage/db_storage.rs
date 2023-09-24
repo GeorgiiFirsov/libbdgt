@@ -1,7 +1,3 @@
-use std::path;
-
-use rusqlite;
-
 use crate::error::{Result, Error};
 use crate::location::Location;
 use super::data::{EncryptedTransaction, EncryptedCategory, EncryptedAccount, EncryptedPlan, Id, CategoryType};
@@ -515,7 +511,7 @@ impl DbStorage {
             .map_err(Error::from)
     }
 
-    fn db_path<L: Location>(loc: &L) -> path::PathBuf {
+    fn db_path<L: Location>(loc: &L) -> std::path::PathBuf {
         loc.root()
             .join("database")
     }

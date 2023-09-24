@@ -1,8 +1,6 @@
 use std::ffi::CString;
 use std::cell::RefCell;
 
-use gpgme;
-
 use crate::error::{Error, Result};
 use super::engine::CryptoEngine;
 use super::buffer::CryptoBuffer;

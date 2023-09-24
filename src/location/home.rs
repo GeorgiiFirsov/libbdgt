@@ -1,8 +1,3 @@
-use std::path;
-use std::fs;
-
-use dirs;
-
 use crate::error::Result;
 use super::location::Location;
 
@@ -20,7 +15,7 @@ impl HomeLocation {
 
 
 impl Location for HomeLocation {
-    fn root(&self) -> path::PathBuf {
+    fn root(&self) -> std::path::PathBuf {
         dirs::home_dir()
             .unwrap()
             .join(".bdgt")
@@ -33,7 +28,7 @@ impl Location for HomeLocation {
 
     fn create_if_absent(&self) -> Result<()> {
         if !self.exists() {
-            fs::create_dir_all(self.root())?;
+            std::fs::create_dir_all(self.root())?;
         }
 
         Ok(())
