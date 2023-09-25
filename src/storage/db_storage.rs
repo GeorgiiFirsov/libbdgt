@@ -1,6 +1,6 @@
 use crate::error::{Result, Error};
 use crate::location::Location;
-use super::data::{EncryptedTransaction, EncryptedCategory, EncryptedAccount, EncryptedPlan, Id, CategoryType};
+use super::data::{EncryptedTransaction, EncryptedCategory, EncryptedAccount, EncryptedPlan, Id, Timestamp, CategoryType};
 use super::storage::DataStorage;
 
 
@@ -129,7 +129,7 @@ impl DataStorage for DbStorage {
         self.query(statement, Self::transaction_from_row)
     }
 
-    fn transactions_after(&self, start_timestamp: super::Timestamp) -> Result<Vec<EncryptedTransaction>> {
+    fn transactions_after(&self, start_timestamp: Timestamp) -> Result<Vec<EncryptedTransaction>> {
         let statement_fmt = r#"
             SELECT transaction_id, timestamp, description, account_id, category_id, amount
               FROM transactions
@@ -140,7 +140,7 @@ impl DataStorage for DbStorage {
         self.query_with_params(statement_fmt, rusqlite::params![start_timestamp], Self::transaction_from_row)
     }
 
-    fn transactions_between(&self, start_timestamp: super::Timestamp, end_timestamp: super::Timestamp) -> Result<Vec<EncryptedTransaction>> {
+    fn transactions_between(&self, start_timestamp: Timestamp, end_timestamp: Timestamp) -> Result<Vec<EncryptedTransaction>> {
         let statement_fmt = r#"
             SELECT transaction_id, timestamp, description, account_id, category_id, amount
               FROM transactions
@@ -163,7 +163,7 @@ impl DataStorage for DbStorage {
         self.query_with_params(statement_fmt, rusqlite::params![account], Self::transaction_from_row)
     }
 
-    fn transactions_of_after(&self, account: Id, start_timestamp: super::Timestamp) -> Result<Vec<EncryptedTransaction>> {
+    fn transactions_of_after(&self, account: Id, start_timestamp: Timestamp) -> Result<Vec<EncryptedTransaction>> {
         let statement_fmt = r#"
             SELECT transaction_id, timestamp, description, account_id, category_id, amount
               FROM transactions
@@ -175,7 +175,7 @@ impl DataStorage for DbStorage {
         self.query_with_params(statement_fmt, rusqlite::params![account, start_timestamp], Self::transaction_from_row)
     }
 
-    fn transactions_of_between(&self, account: Id, start_timestamp: super::Timestamp, end_timestamp: super::Timestamp) -> Result<Vec<EncryptedTransaction>> {
+    fn transactions_of_between(&self, account: Id, start_timestamp: Timestamp, end_timestamp: Timestamp) -> Result<Vec<EncryptedTransaction>> {
         let statement_fmt = r#"
             SELECT transaction_id, timestamp, description, account_id, category_id, amount
               FROM transactions
@@ -199,7 +199,7 @@ impl DataStorage for DbStorage {
         self.query_with_params(statement_fmt, rusqlite::params![category], Self::transaction_from_row)
     }
 
-    fn transactions_with_after(&self, category: Id, start_timestamp: super::Timestamp) -> Result<Vec<EncryptedTransaction>> {
+    fn transactions_with_after(&self, category: Id, start_timestamp: Timestamp) -> Result<Vec<EncryptedTransaction>> {
         let statement_fmt = r#"
             SELECT transaction_id, timestamp, description, account_id, category_id, amount
               FROM transactions
@@ -211,7 +211,7 @@ impl DataStorage for DbStorage {
         self.query_with_params(statement_fmt, rusqlite::params![category, start_timestamp], Self::transaction_from_row)
     }
 
-    fn transactions_with_between(&self, category: Id, start_timestamp: super::Timestamp, end_timestamp: super::Timestamp) -> Result<Vec<EncryptedTransaction>> {
+    fn transactions_with_between(&self, category: Id, start_timestamp: Timestamp, end_timestamp: Timestamp) -> Result<Vec<EncryptedTransaction>> {
         let statement_fmt = r#"
             SELECT transaction_id, timestamp, description, account_id, category_id, amount
               FROM transactions
