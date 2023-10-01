@@ -62,6 +62,12 @@ where
             .version()
     }
 
+    /// Encryption key identifier.
+    pub fn key_id(&self) -> &Ce::KeyId {
+        self.config
+            .key_id()
+    }
+
     /// Local instance identifier.
     pub fn instance_id(&self) -> &InstanceId {
         self.config
