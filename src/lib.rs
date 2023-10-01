@@ -3,6 +3,7 @@
 //! `libbdgt` is a backend library for `bdgt` app.
 
 extern crate dirs;
+extern crate uuid;
 extern crate gpgme;
 extern crate chrono;
 extern crate rusqlite;

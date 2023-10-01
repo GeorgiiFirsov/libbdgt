@@ -1,7 +1,7 @@
 use std::array::TryFromSliceError;
 
 use crate::crypto::{CryptoEngine, KeyIdentifier, CryptoBuffer};
-use crate::config::Config;
+use crate::config::{Config, InstanceId};
 use crate::error::{Result, Error};
 use super::storage::{EncryptedTransaction, EncryptedAccount, EncryptedCategory, EncryptedPlan};
 use super::storage::{DataStorage, Id, Transaction, Account, Category, Plan, CategoryType};
@@ -19,8 +19,11 @@ where
     /// Storage used to store the data.
     storage: St,
 
+    /// Instance configuration.
+    config: Config<Ce>,
+
     /// Key used to encrypt and decrypt sensitive data.
-    key: Ce::Key
+    key: Ce::Key,
 }
 
 
@@ -42,7 +45,8 @@ where
         Ok(Budget { 
             crypto_engine: crypto_engine, 
             storage: storage,
-            key: key
+            config: config,
+            key: key,
         })
     }
 
@@ -56,6 +60,12 @@ where
     pub fn engine_version(&self) -> &str {
         self.crypto_engine
             .version()
+    }
+
+    /// Local instance identifier.
+    pub fn instance_id(&self) -> &InstanceId {
+        self.config
+            .instance_id()
     }
 
     /// Add a new transaction.
