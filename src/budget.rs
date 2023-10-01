@@ -4,7 +4,7 @@ use crate::crypto::{CryptoEngine, KeyIdentifier, CryptoBuffer};
 use crate::config::{Config, InstanceId};
 use crate::error::{Result, Error};
 use super::storage::{EncryptedTransaction, EncryptedAccount, EncryptedCategory, EncryptedPlan};
-use super::storage::{DataStorage, Id, Transaction, Account, Category, Plan, CategoryType};
+use super::storage::{DataStorage, Id, Timestamp, Transaction, Account, Category, Plan, CategoryType};
 
 
 /// Budget manager.
@@ -144,6 +144,37 @@ where
             .iter()
             .map(|transaction| self.decrypt_transaction(transaction))
             .collect()
+    }
+
+    /// Return all transactions bound with a given account sorted by timestamp 
+    /// in descending order.
+    /// 
+    /// Used for optimization.
+    /// 
+    /// * `account` - account identifier to return transactions for
+    pub fn transactions_of(&self, account: Id) -> Result<Vec<Transaction>> {
+        let encrypted_transactions = self.storage.transactions_of(account)?;
+        encrypted_transactions
+            .iter()
+            .map(|transaction| self.decrypt_transaction(transaction))
+            .collect() 
+    }
+
+    /// Return all transactions between a given time points (including start 
+    /// of the interval and excluding the end) bound with a given account 
+    /// sorted by timestamp in descending order.
+    /// 
+    /// Used for optimization.
+    /// 
+    /// * `account` - account identifier to return transactions for
+    /// * `start_timestamp` - point in time to start from
+    /// * `end_timestamp` - point in time to end before
+    pub fn transactions_of_between(&self, account: Id, start_timestamp: Timestamp, end_timestamp: Timestamp) -> Result<Vec<Transaction>> {
+        let encrypted_transactions = self.storage.transactions_of_between(account, start_timestamp, end_timestamp)?;
+        encrypted_transactions
+            .iter()
+            .map(|transaction| self.decrypt_transaction(transaction))
+            .collect() 
     }
 
     /// Add a new account.
