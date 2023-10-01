@@ -61,7 +61,7 @@ where
     /// Add a new transaction.
     /// 
     /// * `transaction` - transaction data
-    pub fn add_transaction(&self, transaction: Transaction) -> Result<()> {
+    pub fn add_transaction(&self, transaction: Transaction) -> Result<Id> {
         //
         // Amount is considered to have a proper sign,
         // so I just add it to a corresponding account's
@@ -82,8 +82,10 @@ where
         // Hence there is a way to restore consistency.
         //
 
-        self.storage.add_transaction(self.encrypt_transaction(&transaction)?)?;
-        self.storage.update_account(self.encrypt_account(&decrypted_account)?)
+        let id = self.storage.add_transaction(self.encrypt_transaction(&transaction)?)?;
+        self.storage.update_account(self.encrypt_account(&decrypted_account)?)?;
+
+        Ok(id)
     }
 
     /// Remove transaction.
@@ -131,7 +133,7 @@ where
     /// Add a new account.
     /// 
     /// * `account` - account data
-    pub fn add_account(&self, account: Account) -> Result<()> {
+    pub fn add_account(&self, account: Account) -> Result<Id> {
         self.storage.add_account(self.encrypt_account(&account)?)
     }
 
@@ -157,7 +159,7 @@ where
     /// Add a new category.
     /// 
     /// * `category` - category data
-    pub fn add_category(&self, category: Category) -> Result<()> {
+    pub fn add_category(&self, category: Category) -> Result<Id> {
         self.storage.add_category(self.encrypt_category(&category)?)
     }
 
@@ -195,7 +197,7 @@ where
     /// Add a new plan.
     /// 
     /// * `plan` - plan data
-    pub fn add_plan(&self, plan: Plan) -> Result<()> {
+    pub fn add_plan(&self, plan: Plan) -> Result<Id> {
         self.storage.add_plan(self.encrypt_plan(&plan)?)
     }
 

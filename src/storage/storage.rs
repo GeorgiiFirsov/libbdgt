@@ -7,7 +7,7 @@ pub trait DataStorage {
     /// Add a new transaction.
     /// 
     /// * `transaction` - protected transaction data
-    fn add_transaction(&self, transaction: EncryptedTransaction) -> Result<()>;
+    fn add_transaction(&self, transaction: EncryptedTransaction) -> Result<Id>;
 
     /// Remove transaction.
     /// 
@@ -99,7 +99,7 @@ pub trait DataStorage {
     /// Add a new account.
     /// 
     /// * `account` - protected account data
-    fn add_account(&self, account: EncryptedAccount) -> Result<()>;
+    fn add_account(&self, account: EncryptedAccount) -> Result<Id>;
 
     /// Update account.
     /// 
@@ -125,7 +125,7 @@ pub trait DataStorage {
     /// Add a new category.
     /// 
     /// * `category` - protected category data
-    fn add_category(&self, category: EncryptedCategory) -> Result<()>;
+    fn add_category(&self, category: EncryptedCategory) -> Result<Id>;
 
     /// Update category.
     /// 
@@ -157,7 +157,7 @@ pub trait DataStorage {
     /// Add a new plan.
     /// 
     /// * `plan` - protected plan data
-    fn add_plan(&self, plan: EncryptedPlan) -> Result<()>;
+    fn add_plan(&self, plan: EncryptedPlan) -> Result<Id>;
 
     /// Update plan.
     /// 

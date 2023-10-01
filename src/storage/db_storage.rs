@@ -77,7 +77,7 @@ impl DbStorage {
 
 
 impl DataStorage for DbStorage {
-    fn add_transaction(&self, transaction: EncryptedTransaction) -> Result<()> {
+    fn add_transaction(&self, transaction: EncryptedTransaction) -> Result<Id> {
         let statement_fmt = r#"
             INSERT INTO transactions (timestamp, description, account_id, category_id, amount)
             VALUES (?1, ?2, ?3, ?4, ?5)
@@ -86,8 +86,8 @@ impl DataStorage for DbStorage {
         self.db
             .execute(statement_fmt, rusqlite::params![transaction.timestamp, transaction.description, 
                 transaction.account_id, transaction.category_id, transaction.amount])?;
-        
-        Ok(())
+
+        Ok(self.last_inserted_id())
     }
 
     fn remove_transaction(&self, transaction: Id) -> Result<()> {
@@ -224,7 +224,7 @@ impl DataStorage for DbStorage {
         self.query_with_params(statement_fmt, rusqlite::params![category, start_timestamp, end_timestamp], Self::transaction_from_row)
     }
 
-    fn add_account(&self, account: EncryptedAccount) -> Result<()> {
+    fn add_account(&self, account: EncryptedAccount) -> Result<Id> {
         let statement_fmt = r#"
             INSERT INTO accounts (name, balance)
             VALUES (?1, ?2)
@@ -233,7 +233,7 @@ impl DataStorage for DbStorage {
         self.db
             .execute(statement_fmt, rusqlite::params![account.name, account.balance])?;
 
-        Ok(())
+        Ok(self.last_inserted_id())
     }
 
     fn update_account(&self, account: EncryptedAccount) -> Result<()> {
@@ -303,7 +303,7 @@ impl DataStorage for DbStorage {
         self.query(statement, Self::account_from_row)
     }
 
-    fn add_category(&self, category: EncryptedCategory) -> Result<()> {
+    fn add_category(&self, category: EncryptedCategory) -> Result<Id> {
         let statement_fmt = r#"
             INSERT INTO categories (name, type)
             VALUES (?1, ?2)
@@ -312,7 +312,7 @@ impl DataStorage for DbStorage {
         self.db
             .execute(statement_fmt, rusqlite::params![category.name, category.category_type])?;
 
-        Ok(())
+        Ok(self.last_inserted_id())
     }
 
     fn update_category(&self, category: EncryptedCategory) -> Result<()> {
@@ -379,7 +379,7 @@ impl DataStorage for DbStorage {
         self.query_with_params(statement_fmt, rusqlite::params![category_type], Self::category_from_row)
     }
 
-    fn add_plan(&self, plan: EncryptedPlan) -> Result<()> {
+    fn add_plan(&self, plan: EncryptedPlan) -> Result<Id> {
         let statement_fmt = r#"
             INSERT INTO plans (category_id, name, amount_limit)
             VALUES (?1, ?2, ?3)
@@ -388,7 +388,7 @@ impl DataStorage for DbStorage {
         self.db
             .execute(statement_fmt, rusqlite::params![plan.category_id, plan.name, plan.amount_limit])?;
 
-        Ok(())
+        Ok(self.last_inserted_id())
     }
 
     fn update_plan(&self, plan: EncryptedPlan) -> Result<()> {
@@ -503,7 +503,7 @@ impl DbStorage {
                 ON categories (type);
 
             CREATE INDEX plans_by_category
-                ON plans(category_id);
+                ON plans (category_id);
         "#;
 
         self.db
@@ -537,6 +537,13 @@ impl DbStorage {
         C: Fn(&rusqlite::Row<'_>) -> Result<T>
     {
         self.query_with_params(statement, [], convert)
+    }
+
+    fn last_inserted_id(&self) -> Id {
+        let id = self.db
+            .last_insert_rowid();
+
+        id as Id
     }
 }
 
