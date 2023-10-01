@@ -163,6 +163,14 @@ where
         self.storage.remove_account(account, force)
     }
 
+    /// Return account with a given identifier.
+    /// 
+    /// * `account` - identifier to return record for
+    pub fn account(&self, account: Id) -> Result<Account> {
+        let encrypted_account = self.storage.account(account)?;
+        self.decrypt_account(&encrypted_account)
+    }
+
     /// Return all accounts.
     pub fn accounts(&self) -> Result<Vec<Account>> {
         let encrypted_accounts = self.storage.accounts()?;
@@ -188,6 +196,14 @@ where
     /// * `category` - identifier of category to remove
     pub fn remove_category(&self, category: Id) -> Result<()> {
         self.storage.remove_category(category)
+    }
+
+    /// Return category with a given identifier.
+    /// 
+    /// * `category` - identifier to return record for
+    pub fn category(&self, category: Id) -> Result<Category> {
+        let encrypted_category = self.storage.category(category)?;
+        self.decrypt_category(&encrypted_category)
     }
 
     /// Return all categories.
@@ -222,6 +238,14 @@ where
     /// * `plan` - identifier of plan to remove
     pub fn remove_plan(&self, plan: Id) -> Result<()> {
         self.storage.remove_plan(plan)
+    }
+
+    /// Return plan with a given identifier.
+    /// 
+    /// * `plan` - identifier to return record for
+    pub fn plan(&self, plan: Id) -> Result<Plan> {
+        let encrypted_plan = self.storage.plan(plan)?;
+        self.decrypt_plan(&encrypted_plan)
     }
 
     /// Return all plans sorted by category.
