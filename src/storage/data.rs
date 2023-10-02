@@ -35,11 +35,11 @@ pub struct Transaction {
     /// Brief description
     pub description: String,
 
-    /// Identifier of a category
-    pub category_id: Id,
-
     /// Identifier of an account, which the transaction belongs to
     pub account_id: Id,
+
+    /// Identifier of a category
+    pub category_id: Id,
 
     /// Amount of money affected
     pub amount: isize,
@@ -54,8 +54,8 @@ pub struct EncryptedTransaction {
     pub id: PrimaryId,
     pub timestamp: Timestamp,
     pub description: Vec<u8>,
-    pub category_id: Id,
     pub account_id: Id,
+    pub category_id: Id,
     pub amount: Vec<u8>,
 }
 

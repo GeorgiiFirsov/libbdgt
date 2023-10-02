@@ -347,8 +347,8 @@ where
             id: transaction.id,
             timestamp: transaction.timestamp,
             description: encrypted_description.as_raw().into(),
-            category_id: transaction.category_id,
             account_id: transaction.account_id,
+            category_id: transaction.category_id,
             amount: encrypted_amount.as_raw().into()
         })
     }
@@ -361,8 +361,8 @@ where
             id: encrypted_transaction.id,
             timestamp: encrypted_transaction.timestamp,
             description: decrypted_description,
-            category_id: encrypted_transaction.category_id,
             account_id: encrypted_transaction.account_id,
+            category_id: encrypted_transaction.category_id,
             amount: decrypted_amount
         })
     }
