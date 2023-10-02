@@ -2,24 +2,11 @@ use std::ffi::CString;
 use std::cell::RefCell;
 
 use crate::error::{Error, Result};
+use crate::location::Location;
 use super::engine::CryptoEngine;
 use super::buffer::CryptoBuffer;
 use super::key::{Key, KeyId, KeyHandle, KeyIdentifier};
 use super::{MISSING_SECRET_KEY, KEY_IS_NOT_SUITABLE, ENCRYPTION_ERROR, DECRYPTION_ERROR};
-
-
-/// Engine-specific key handle type.
-type NativeHandle = gpgme::Key;
-
-impl KeyHandle for NativeHandle {
-    fn is_good(&self) -> bool {
-        !self.is_bad()
-    }
-
-    fn can_encrypt(&self) -> bool {
-        self.can_encrypt()
-    }
-}
 
 
 /// Engine-specific key identifier type.
@@ -38,6 +25,20 @@ impl KeyIdentifier for NativeId {
 }
 
 
+/// Engine-specific key handle type.
+type NativeHandle = gpgme::Key;
+
+impl KeyHandle for NativeHandle {
+    fn is_good(&self) -> bool {
+        !self.is_bad()
+    }
+
+    fn can_encrypt(&self) -> bool {
+        self.can_encrypt()
+    }
+}
+
+
 /// GPG cryptographic engine
 pub struct GpgCryptoEngine {
     /// Internal engine handle
@@ -49,14 +50,28 @@ pub struct GpgCryptoEngine {
 
 
 impl GpgCryptoEngine {
-    /// Creates and initializes cryptographic engine for bdgt.
-    pub fn new() -> Result<Self> {
-        let ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
+    /// Creates a cryptographic engine for information queries.
+    /// This engine cannot be used for performing cryptographic operations.
+    pub fn new_dummy() -> Result<Self> {
+        Self::new()
+    }
 
-        Ok(GpgCryptoEngine { 
-            engine: gpgme::init(),
-            ctx: RefCell::new(ctx)
-        })
+    /// Creates a cryptographic engine for bdgt and initializes it.
+    pub fn create<L: Location>(loc: &L, key: &<Self as CryptoEngine>::KeyId) -> Result<Self> {
+        //
+        // Location for config may be absent
+        //
+
+        loc.create_if_absent()?;
+        
+        Self::new()
+            .and_then(|engine| engine.create_pwd(loc, key))
+    }
+
+    /// Opens a cryptographic engine for bdgt.
+    pub fn open<L: Location>(loc: &L) -> Result<Self> {
+        Self::new()
+            .and_then(|engine| engine.open_pwd(loc))
     }
 }
 
@@ -108,7 +123,29 @@ impl CryptoEngine for GpgCryptoEngine {
 
 
 impl GpgCryptoEngine {
-    fn verify_key(&self, key: <GpgCryptoEngine as CryptoEngine>::Key) -> Result<<GpgCryptoEngine as CryptoEngine>::Key> {
+    fn new() -> Result<Self> {
+        let ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
+
+        Ok(GpgCryptoEngine { 
+            engine: gpgme::init(),
+            ctx: RefCell::new(ctx)
+        })
+    }
+
+    fn create_pwd<L: Location>(mut self, _loc: &L, key: &<Self as CryptoEngine>::KeyId) -> Result<Self> {
+        //
+        // Check if key exists and suitable for encryption
+        //
+
+        let _key = self.lookup_key(key)?;
+        Ok(self)
+    }
+
+    fn open_pwd<L: Location>(mut self, _loc: &L) -> Result<Self> {
+        Ok(self)
+    }
+
+    fn verify_key(&self, key: <Self as CryptoEngine>::Key) -> Result<<Self as CryptoEngine>::Key> {
         //
         // Borrow context for the entire function life
         //
