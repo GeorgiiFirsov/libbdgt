@@ -2,7 +2,7 @@ use crate::error::Result;
 use super::buffer::CryptoBuffer;
 
 
-/// Cryptographic engine trait
+/// Cryptographic engine trait. 
 pub trait CryptoEngine {
     /// Key identifier wrapper type, that hides engine-specific stuff behind.
     type KeyId;
@@ -23,27 +23,15 @@ pub trait CryptoEngine {
     /// * `id` - identifier of a key to look for
     fn lookup_key(&self, id: &Self::KeyId) -> Result<Self::Key>;
 
-    /// Encrypts a BLOB using a public key.
+    /// Encrypts a BLOB using a provided key.
     /// 
-    /// * `key` - handle to a public key, that is intended to be used for encryption
+    /// * `key` - handle to a key.
     /// * `plaintext` - data to encrypt
-    fn encrypt_asymmetric(&self, key: &Self::Key, plaintext: &[u8]) -> Result<CryptoBuffer>;
+    fn encrypt(&self, key: &Self::Key, plaintext: &[u8]) -> Result<CryptoBuffer>;
 
-    /// Decrypts a BLOB using a private key.
+    /// Decrypts a BLOB using a provided key.
     /// 
-    /// * `key` - handle to a private key, that is intended to be used for decryption
+    /// * `key` - handle to a key.
     /// * `ciphertext` - data to decrypt
-    fn decrypt_asymmetric(&self, key: &Self::Key, ciphertext: &[u8]) -> Result<CryptoBuffer>;
-
-    /// Encrypts a BLOB using a symmetric key, wrapped with provided asymmetetric key.
-    /// 
-    /// * `key` - handle to an asymmetric key, that is used to wrap a symmetric key.
-    /// * `plaintext` - data to encrypt
-    fn encrypt_hybrid(&self, key: &Self::Key, plaintext: &[u8]) -> Result<CryptoBuffer>;
-
-    /// Decrypts a BLOB using a symmetric key, wrapped with provided asymmetetric key.
-    /// 
-    /// * `key` - handle to an asymmetric key, that is used to wrap a symmetric key.
-    /// * `ciphertext` - data to decrypt
-    fn decrypt_hybrid(&self, key: &Self::Key, ciphertext: &[u8]) -> Result<CryptoBuffer>;
+    fn decrypt(&self, key: &Self::Key, ciphertext: &[u8]) -> Result<CryptoBuffer>;
 }

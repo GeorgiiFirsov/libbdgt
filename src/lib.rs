@@ -4,10 +4,11 @@
 
 extern crate dirs;
 extern crate uuid;
+extern crate rand;
 extern crate gpgme;
 extern crate chrono;
+extern crate aes_gcm;
 extern crate rusqlite;
-extern crate passwords;
 
 //
 // Public modules

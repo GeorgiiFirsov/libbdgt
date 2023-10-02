@@ -1,10 +1,13 @@
 use std::ffi::CString;
-use std::cell::RefCell;
+use std::cell::{RefCell, RefMut};
+
+use rand::{SeedableRng, RngCore};
 
 use crate::error::{Error, Result};
 use crate::location::Location;
 use super::engine::CryptoEngine;
-use super::buffer::{CryptoBuffer, DestructiveFrom};
+use super::buffer::CryptoBuffer;
+use super::symmetric::SymmetricCipher;
 use super::key::{Key, KeyId, KeyHandle, KeyIdentifier};
 use super::{MISSING_SECRET_KEY, KEY_IS_NOT_SUITABLE, ENCRYPTION_ERROR, DECRYPTION_ERROR, INVALID_ENGINE_STATE};
 
@@ -40,7 +43,7 @@ impl KeyHandle for NativeHandle {
 
 
 /// Encrypted passphrase holder.
-struct EncryptedPwd {
+struct EncryptedKey {
     /// Encrypted passphrase data. Initialized in constructor.
     encrypted_buffer: CryptoBuffer,
 
@@ -49,7 +52,7 @@ struct EncryptedPwd {
 }
 
 
-impl EncryptedPwd {
+impl EncryptedKey {
     /// Open and read encrypted passphrase.
     /// 
     /// * `path` - path to encrypted passphrase file
@@ -58,7 +61,7 @@ impl EncryptedPwd {
         // Just read encrypted content here and do nothing else
         //
 
-        Ok(EncryptedPwd { 
+        Ok(EncryptedKey { 
             encrypted_buffer: CryptoBuffer::from(std::fs::read(path)?), 
             decrypted_buffer: CryptoBuffer::default(), 
         })
@@ -79,23 +82,16 @@ impl EncryptedPwd {
 }
 
 
-impl gpgme::PassphraseProvider for EncryptedPwd {
-    fn get_passphrase(&mut self, _request: gpgme::PassphraseRequest<'_>, out: &mut dyn std::io::Write) -> gpgme::Result<()> {
-        //
-        // At this stage passphrase MUST be decrypted
-        //
-
-        if self.decrypted_buffer.is_empty() {
-            return Err(gpgme::Error::BAD_PASSPHRASE);
-        }
-
-        out.write(self.decrypted_buffer.as_bytes())?;
-        Ok(())
-    }
-}
-
-
-/// GPG cryptographic engine
+/// GnuPG cryptographic engine.
+/// 
+/// This engine in fact uses GPG keys to wrap a symmetric key, that
+/// is used to perform actual cryptographic transformations via 
+/// [`CryptoEngine::encrypt_hybrid`] and [`CryptoEngine::decrypt_hybrid`]
+/// functions.
+/// 
+/// Asymmetric encryption functions are used to wrap the symmetric key.
+/// This key is generated randomly at creation stage and saved in
+/// encrypted form to file.
 pub struct GpgCryptoEngine {
     /// Internal engine handle.
     engine: gpgme::Gpgme,
@@ -103,8 +99,8 @@ pub struct GpgCryptoEngine {
     /// Internal context.
     ctx: RefCell<gpgme::Context>,
 
-    /// Encrypted passphrase provider.
-    pwd: Option<RefCell<EncryptedPwd>>,
+    /// Encrypted symmetric key provider.
+    symmetric_key: Option<RefCell<EncryptedKey>>,
 }
 
 
@@ -124,13 +120,13 @@ impl GpgCryptoEngine {
         loc.create_if_absent()?;
         
         Self::new()
-            .and_then(|engine| engine.create_pwd(loc, key_id))
+            .and_then(|engine| engine.create_symmetric_key(loc, key_id))
     }
 
     /// Opens a cryptographic engine for bdgt.
     pub fn open<L: Location>(loc: &L) -> Result<Self> {
         Self::new()
-            .and_then(|engine| engine.open_pwd(loc))
+            .and_then(|engine| engine.open_symmetric_key(loc))
     }
 }
 
@@ -155,42 +151,15 @@ impl CryptoEngine for GpgCryptoEngine {
 
         self.verify_key(Key::new(internal_key, id))
     }
-
-    fn encrypt_asymmetric(&self, key: &Self::Key, plaintext: &[u8]) -> Result<CryptoBuffer> {
-        let keys = [key.native_handle()];
-        let mut ciphertext = Vec::new();
-
-        self.ctx
-            .borrow_mut()
-            .encrypt(keys, plaintext, &mut ciphertext)
-            .map_err(Error::from)
-            .and_then(Self::check_encryption_result)
-            .map(|_| CryptoBuffer::from(ciphertext))
-    }
-
-    fn decrypt_asymmetric(&self, _key: &Self::Key, ciphertext: &[u8]) -> Result<CryptoBuffer> {
-        let mut plaintext = Vec::new();
-
-        self.ctx
-            .borrow_mut()
-            .decrypt(ciphertext, &mut plaintext)
-            .map_err(Error::from)
-            .and_then(Self::check_decryption_result)
-            .map(|_| CryptoBuffer::from(plaintext))
-    }
     
-    fn encrypt_hybrid(&self, key: &Self::Key, plaintext: &[u8]) -> Result<CryptoBuffer> {
-        self.decrypt_pwd(key)?;
-
-        // TODO
-        self.encrypt_asymmetric(key, plaintext)
+    fn encrypt(&self, key: &Self::Key, plaintext: &[u8]) -> Result<CryptoBuffer> {
+        let symmetric_key = self.decrypt_symmetric_key(key)?;
+        SymmetricCipher::encrypt(symmetric_key.decrypted_buffer.as_bytes(), plaintext)
     }
 
-    fn decrypt_hybrid(&self, key: &Self::Key, ciphertext: &[u8]) -> Result<CryptoBuffer> {
-        self.decrypt_pwd(key)?;
-
-        // TODO
-        self.decrypt_asymmetric(key, ciphertext)
+    fn decrypt(&self, key: &Self::Key, ciphertext: &[u8]) -> Result<CryptoBuffer> {
+        let symmetric_key = self.decrypt_symmetric_key(key)?;
+        SymmetricCipher::decrypt(symmetric_key.decrypted_buffer.as_bytes(), ciphertext)
     }
 }
 
@@ -202,11 +171,11 @@ impl GpgCryptoEngine {
         Ok(GpgCryptoEngine { 
             engine: gpgme::init(),
             ctx: RefCell::new(ctx),
-            pwd: None,
+            symmetric_key: None,
         })
     }
 
-    fn create_pwd<L: Location>(self, loc: &L, key_id: &<Self as CryptoEngine>::KeyId) -> Result<Self> {
+    fn create_symmetric_key<L: Location>(self, loc: &L, key_id: &<Self as CryptoEngine>::KeyId) -> Result<Self> {
         //
         // Check if key exists and suitable for encryption
         //
@@ -214,39 +183,35 @@ impl GpgCryptoEngine {
         let key = self.lookup_key(key_id)?;
 
         //
-        // Create strong password and write it in encrypted form to file
+        // Create a random key using standard PRNG (cryptographically secure)
+        // and write it in encrypted form to file
         //
 
-        let mut passphrase = passwords::PasswordGenerator::new()
-            .uppercase_letters(true)
-            .symbols(true)
-            .strict(true)
-            .length(64)
-            .generate_one()
-            .map_err(Error::from_message)?;
+        let mut symmetric_key = CryptoBuffer::new_with_size(SymmetricCipher::key_size());
 
-        let passphrase = CryptoBuffer::destructive_from(&mut passphrase);
-        let encrypted_passphrase = self.encrypt_asymmetric(&key, passphrase.as_bytes())?;
+        rand::rngs::StdRng::from_entropy()
+            .try_fill_bytes(symmetric_key.as_mut_bytes())?;
 
-        std::fs::write(Self::pwd_file(loc), encrypted_passphrase.as_bytes())?;
+        let encrypted_key = self.encrypt_asymmetric(&key, symmetric_key.as_bytes())?;
+        std::fs::write(Self::symmetric_key_file(loc), encrypted_key.as_bytes())?;
 
         //
         // Set passphrase file in engine just by common opening procedure
         //
 
-        self.open_pwd(loc)
+        self.open_symmetric_key(loc)
     }
 
-    fn open_pwd<L: Location>(mut self, loc: &L) -> Result<Self> {
-        let encrypted_pwd = EncryptedPwd::new(&Self::pwd_file(loc))?;
-        self.pwd = Some(RefCell::new(encrypted_pwd));
+    fn open_symmetric_key<L: Location>(mut self, loc: &L) -> Result<Self> {
+        let encrypted_symmetric_key = EncryptedKey::new(&Self::symmetric_key_file(loc))?;
+        self.symmetric_key = Some(RefCell::new(encrypted_symmetric_key));
 
         Ok(self)
     }
 
-    fn pwd_file<L: Location>(loc: &L) -> std::path::PathBuf {
+    fn symmetric_key_file<L: Location>(loc: &L) -> std::path::PathBuf {
         loc.root()
-            .join("pwd")
+            .join("symm")
     }
 }
 
@@ -283,18 +248,43 @@ impl GpgCryptoEngine {
             .ok_or(Error::from_message_with_extra(KEY_IS_NOT_SUITABLE, id.to_string()))
     }
 
-    fn decrypt_pwd(&self, key: &<Self as CryptoEngine>::Key) -> Result<()> {
-        if self.pwd.is_none() {
+    fn decrypt_symmetric_key(&self, key: &<Self as CryptoEngine>::Key) -> Result<RefMut<'_, EncryptedKey>> {
+        if self.symmetric_key.is_none() {
             return Err(Error::from_message(INVALID_ENGINE_STATE));
         }
 
-        self.pwd
+        let mut borrowed_symmetric_key = self.symmetric_key
             .as_ref()
             .unwrap()
-            .borrow_mut()
+            .borrow_mut();
+
+        borrowed_symmetric_key
             .decrypt(key, self)?;
 
-        Ok(())
+        Ok(borrowed_symmetric_key)
+    }
+
+    fn encrypt_asymmetric(&self, key: &<Self as CryptoEngine>::Key, plaintext: &[u8]) -> Result<CryptoBuffer> {
+        let keys = [key.native_handle()];
+        let mut ciphertext = Vec::new();
+
+        self.ctx
+            .borrow_mut()
+            .encrypt(keys, plaintext, &mut ciphertext)
+            .map_err(Error::from)
+            .and_then(Self::check_encryption_result)
+            .map(|_| CryptoBuffer::from(ciphertext))
+    }
+
+    fn decrypt_asymmetric(&self, _key: &<Self as CryptoEngine>::Key, ciphertext: &[u8]) -> Result<CryptoBuffer> {
+        let mut plaintext = Vec::new();
+
+        self.ctx
+            .borrow_mut()
+            .decrypt(ciphertext, &mut plaintext)
+            .map_err(Error::from)
+            .and_then(Self::check_decryption_result)
+            .map(|_| CryptoBuffer::from(plaintext))
     }
 
     fn check_encryption_result(result: gpgme::EncryptionResult) -> Result<()> {

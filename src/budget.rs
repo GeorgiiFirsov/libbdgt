@@ -309,12 +309,12 @@ where
 {
     fn encrypt_string(&self, data: &String) -> Result<CryptoBuffer> {
         self.crypto_engine
-            .encrypt_hybrid(&self.key, data.as_bytes())
+            .encrypt(&self.key, data.as_bytes())
     }
 
     fn decrypt_string(&self, data: &[u8]) -> Result<String> {
         let decrypted = self.crypto_engine
-            .decrypt_hybrid(&self.key, data)?;
+            .decrypt(&self.key, data)?;
 
         Ok(
             String::from_utf8_lossy(decrypted.as_bytes())
@@ -324,12 +324,12 @@ where
 
     fn encrypt_isize(&self, data: &isize) -> Result<CryptoBuffer> {
         self.crypto_engine
-            .encrypt_hybrid(&self.key, &data.to_le_bytes())
+            .encrypt(&self.key, &data.to_le_bytes())
     }
 
     fn decrypt_isize(&self, data: &[u8]) -> Result<isize> {
         let decrypted = self.crypto_engine
-            .decrypt_hybrid(&self.key, data)?;
+            .decrypt(&self.key, data)?;
 
         let bytes = decrypted
             .as_bytes()

@@ -17,12 +17,24 @@ pub struct CryptoBuffer {
 impl CryptoBuffer {
     /// Creates an empty buffer.
     pub fn new() -> Self {
-        CryptoBuffer { data: Vec::default() }
+        CryptoBuffer { data: Vec::new() }
+    }
+
+    /// Creates a buffer with specified amount of zeros.
+    /// 
+    /// * `size` - initial size of buffer
+    pub fn new_with_size(size: usize) -> Self {
+        CryptoBuffer { data: vec![0; size] }
     }
 
     /// Returns read-only raw bytes of the stored data.
     pub fn as_bytes(&self) -> &[u8] {
         &self.data
+    }
+
+    /// Returns mutable raw bytes of the stored data.
+    pub fn as_mut_bytes(&mut self) -> &mut [u8] {
+        self.data.as_mut_slice()
     }
 
     /// Check if buffer is empty. 

@@ -1,7 +1,8 @@
-mod engine;
 mod key;
-mod gpg_engine;
 mod buffer;
+mod engine;
+mod symmetric;
+mod gpg_engine;
 
 pub use self::engine::CryptoEngine;
 pub use self::buffer::CryptoBuffer;

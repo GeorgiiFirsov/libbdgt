@@ -91,3 +91,15 @@ impl From<std::io::Error> for Error {
         }
     }
 }
+
+
+impl From<rand::Error> for Error {
+    fn from(value: rand::Error) -> Self {
+        let msg = value.to_string();
+
+        Error { 
+            msg: msg, 
+            extra: String::new()
+        }
+    }
+}
