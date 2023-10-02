@@ -1,4 +1,5 @@
 mod key;
+mod prng;
 mod buffer;
 mod engine;
 mod symmetric;

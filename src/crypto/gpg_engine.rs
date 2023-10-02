@@ -1,10 +1,11 @@
 use std::ffi::CString;
 use std::cell::{RefCell, RefMut};
 
-use rand::{SeedableRng, RngCore};
+use rand::RngCore;
 
 use crate::error::{Error, Result};
 use crate::location::Location;
+use super::prng::generate_random;
 use super::engine::CryptoEngine;
 use super::buffer::CryptoBuffer;
 use super::symmetric::SymmetricCipher;
@@ -188,9 +189,7 @@ impl GpgCryptoEngine {
         //
 
         let mut symmetric_key = CryptoBuffer::new_with_size(SymmetricCipher::key_size());
-
-        rand::rngs::StdRng::from_entropy()
-            .try_fill_bytes(symmetric_key.as_mut_bytes())?;
+        generate_random(symmetric_key.as_mut_bytes())?;
 
         let encrypted_key = self.encrypt_asymmetric(&key, symmetric_key.as_bytes())?;
         std::fs::write(Self::symmetric_key_file(loc), encrypted_key.as_bytes())?;
