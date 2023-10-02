@@ -7,6 +7,7 @@ extern crate uuid;
 extern crate gpgme;
 extern crate chrono;
 extern crate rusqlite;
+extern crate passwords;
 
 //
 // Public modules

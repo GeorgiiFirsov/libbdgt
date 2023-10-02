@@ -4,7 +4,7 @@ use std::cell::RefCell;
 use crate::error::{Error, Result};
 use crate::location::Location;
 use super::engine::CryptoEngine;
-use super::buffer::CryptoBuffer;
+use super::buffer::{CryptoBuffer, DestructiveFrom};
 use super::key::{Key, KeyId, KeyHandle, KeyIdentifier};
 use super::{MISSING_SECRET_KEY, KEY_IS_NOT_SUITABLE, ENCRYPTION_ERROR, DECRYPTION_ERROR};
 
@@ -97,7 +97,7 @@ impl CryptoEngine for GpgCryptoEngine {
         self.verify_key(Key::new(internal_key, id))
     }
 
-    fn encrypt(&self, key: &Self::Key, plaintext: &[u8]) -> Result<CryptoBuffer> {
+    fn encrypt_asymmetric(&self, key: &Self::Key, plaintext: &[u8]) -> Result<CryptoBuffer> {
         let keys = [key.native_handle()];
         let mut ciphertext = Vec::new();
 
@@ -106,10 +106,10 @@ impl CryptoEngine for GpgCryptoEngine {
             .encrypt(keys, plaintext, &mut ciphertext)
             .map_err(Error::from)
             .and_then(Self::check_encryption_result)
-            .map(|_| CryptoBuffer::new(ciphertext))
+            .map(|_| CryptoBuffer::from(ciphertext))
     }
 
-    fn decrypt(&self, _key: &Self::Key, ciphertext: &[u8]) -> Result<CryptoBuffer> {
+    fn decrypt_asymmetric(&self, _key: &Self::Key, ciphertext: &[u8]) -> Result<CryptoBuffer> {
         let mut plaintext = Vec::new();
 
         self.ctx
@@ -117,7 +117,17 @@ impl CryptoEngine for GpgCryptoEngine {
             .decrypt(ciphertext, &mut plaintext)
             .map_err(Error::from)
             .and_then(Self::check_decryption_result)
-            .map(|_| CryptoBuffer::new(plaintext))
+            .map(|_| CryptoBuffer::from(plaintext))
+    }
+    
+    fn encrypt_hybrid(&self, key: &Self::Key, plaintext: &[u8]) -> Result<CryptoBuffer> {
+        // TODO
+        self.encrypt_asymmetric(key, plaintext)
+    }
+
+    fn decrypt_hybrid(&self, key: &Self::Key, ciphertext: &[u8]) -> Result<CryptoBuffer> {
+        // TODO
+        self.decrypt_asymmetric(key, ciphertext)
     }
 }
 
@@ -132,19 +142,50 @@ impl GpgCryptoEngine {
         })
     }
 
-    fn create_pwd<L: Location>(mut self, _loc: &L, key: &<Self as CryptoEngine>::KeyId) -> Result<Self> {
+    fn create_pwd<L: Location>(mut self, loc: &L, key: &<Self as CryptoEngine>::KeyId) -> Result<Self> {
         //
         // Check if key exists and suitable for encryption
         //
 
-        let _key = self.lookup_key(key)?;
-        Ok(self)
+        let key = self.lookup_key(key)?;
+
+        //
+        // Create strong password and write it in encrypted form to file
+        //
+
+        let mut passphrase = passwords::PasswordGenerator::new()
+            .uppercase_letters(true)
+            .symbols(true)
+            .strict(true)
+            .length(64)
+            .generate_one()
+            .map_err(Error::from_message)?;
+
+        let passphrase = CryptoBuffer::destructive_from(&mut passphrase);
+        let encrypted_passphrase = self.encrypt_asymmetric(&key, passphrase.as_bytes())?;
+
+        std::fs::write(Self::pwd_file(loc), encrypted_passphrase.as_bytes())?;
+
+        //
+        // Set passphrase file in engine just by common opening procedure
+        //
+
+        self.open_pwd(loc)
     }
 
     fn open_pwd<L: Location>(mut self, _loc: &L) -> Result<Self> {
+        // TODO
         Ok(self)
     }
 
+    fn pwd_file<L: Location>(loc: &L) -> std::path::PathBuf {
+        loc.root()
+            .join("pwd")
+    }
+}
+
+
+impl GpgCryptoEngine {
     fn verify_key(&self, key: <Self as CryptoEngine>::Key) -> Result<<Self as CryptoEngine>::Key> {
         //
         // Borrow context for the entire function life

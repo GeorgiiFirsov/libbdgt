@@ -25,13 +25,25 @@ pub trait CryptoEngine {
 
     /// Encrypts a BLOB using a public key.
     /// 
-    /// * `key` - handle to a public key, taht is intended to be used for encryption
+    /// * `key` - handle to a public key, that is intended to be used for encryption
     /// * `plaintext` - data to encrypt
-    fn encrypt(&self, key: &Self::Key, plaintext: &[u8]) -> Result<CryptoBuffer>;
+    fn encrypt_asymmetric(&self, key: &Self::Key, plaintext: &[u8]) -> Result<CryptoBuffer>;
 
     /// Decrypts a BLOB using a private key.
     /// 
-    /// * `key` - handle to a private key, taht is intended to be used for decryption
-    /// * `plaintext` - data to decrypt
-    fn decrypt(&self, key: &Self::Key, ciphertext: &[u8]) -> Result<CryptoBuffer>;
+    /// * `key` - handle to a private key, that is intended to be used for decryption
+    /// * `ciphertext` - data to decrypt
+    fn decrypt_asymmetric(&self, key: &Self::Key, ciphertext: &[u8]) -> Result<CryptoBuffer>;
+
+    /// Encrypts a BLOB using a symmetric key, wrapped with provided asymmetetric key.
+    /// 
+    /// * `key` - handle to an asymmetric key, that is used to wrap a symmetric key.
+    /// * `plaintext` - data to encrypt
+    fn encrypt_hybrid(&self, key: &Self::Key, plaintext: &[u8]) -> Result<CryptoBuffer>;
+
+    /// Decrypts a BLOB using a symmetric key, wrapped with provided asymmetetric key.
+    /// 
+    /// * `key` - handle to an asymmetric key, that is used to wrap a symmetric key.
+    /// * `ciphertext` - data to decrypt
+    fn decrypt_hybrid(&self, key: &Self::Key, ciphertext: &[u8]) -> Result<CryptoBuffer>;
 }
