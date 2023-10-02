@@ -61,45 +61,32 @@ impl From<gpgme::Error> for Error {
         let msg = value.to_string();
         let extra = format!("code: {}", value.code());
 
-        Error { 
-            msg: msg, 
-            extra: extra 
-        }
+        Error::from_message_with_extra(msg, extra)
     }
 }
 
 
-impl From<rusqlite::Error> for Error {
-    fn from(value: rusqlite::Error) -> Self {
-        let msg = value.to_string();
-
-        Error {
-            msg: msg,
-            extra: String::new()
+/// Macro for implementing [`From<SomeError>`] in a beautiful way.
+/// It simplifies implementing the trait for a new error type
+/// to writing only one line of code.
+macro_rules! implement_from_error {
+    ($err_type:ty, $($err_types:ty),+ $(,)?) => {
+        implement_from_error!($err_type);
+        implement_from_error!($($err_types, )+);
+    };
+    ($err_type:ty $(,)?) => {
+        impl From<$err_type> for Error {
+            fn from(value: $err_type) -> Self {
+                let msg = value.to_string();
+                Error::from_message(msg)
+            }
         }
     }
 }
 
-
-impl From<std::io::Error> for Error {
-    fn from(value: std::io::Error) -> Self {
-        let msg = value.to_string();
-
-        Error {
-            msg: msg,
-            extra: String::new()
-        }
-    }
-}
-
-
-impl From<rand::Error> for Error {
-    fn from(value: rand::Error) -> Self {
-        let msg = value.to_string();
-
-        Error { 
-            msg: msg, 
-            extra: String::new()
-        }
-    }
-}
+implement_from_error!(
+    rusqlite::Error,
+    std::io::Error,
+    rand::Error,
+    aes_gcm::Error
+);
