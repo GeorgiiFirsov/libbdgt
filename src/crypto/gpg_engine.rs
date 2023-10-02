@@ -6,7 +6,7 @@ use crate::location::Location;
 use super::engine::CryptoEngine;
 use super::buffer::{CryptoBuffer, DestructiveFrom};
 use super::key::{Key, KeyId, KeyHandle, KeyIdentifier};
-use super::{MISSING_SECRET_KEY, KEY_IS_NOT_SUITABLE, ENCRYPTION_ERROR, DECRYPTION_ERROR};
+use super::{MISSING_SECRET_KEY, KEY_IS_NOT_SUITABLE, ENCRYPTION_ERROR, DECRYPTION_ERROR, INVALID_ENGINE_STATE};
 
 
 /// Engine-specific key identifier type.
@@ -39,13 +39,72 @@ impl KeyHandle for NativeHandle {
 }
 
 
+/// Encrypted passphrase holder.
+struct EncryptedPwd {
+    /// Encrypted passphrase data. Initialized in constructor.
+    encrypted_buffer: CryptoBuffer,
+
+    /// Decrypted passphrase. Initialized once on demand.
+    decrypted_buffer: CryptoBuffer,
+}
+
+
+impl EncryptedPwd {
+    /// Open and read encrypted passphrase.
+    /// 
+    /// * `path` - path to encrypted passphrase file
+    pub fn new(path: &std::path::Path) -> Result<Self> {
+        //
+        // Just read encrypted content here and do nothing else
+        //
+
+        Ok(EncryptedPwd { 
+            encrypted_buffer: CryptoBuffer::from(std::fs::read(path)?), 
+            decrypted_buffer: CryptoBuffer::default(), 
+        })
+    }
+
+    /// Decrypt passphrase if not decrypted yet.
+    /// 
+    /// * `key` - key used to decrypt passphrase
+    /// * `engine` - engine used to decrypt passphrase
+    pub fn decrypt(&mut self, key: &<GpgCryptoEngine as CryptoEngine>::Key, engine: &GpgCryptoEngine) -> Result<()> {
+        if self.decrypted_buffer.is_empty() {
+            self.decrypted_buffer = engine.decrypt_asymmetric(
+                key, self.encrypted_buffer.as_bytes())?;
+        }
+
+        Ok(())
+    }
+}
+
+
+impl gpgme::PassphraseProvider for EncryptedPwd {
+    fn get_passphrase(&mut self, _request: gpgme::PassphraseRequest<'_>, out: &mut dyn std::io::Write) -> gpgme::Result<()> {
+        //
+        // At this stage passphrase MUST be decrypted
+        //
+
+        if self.decrypted_buffer.is_empty() {
+            return Err(gpgme::Error::BAD_PASSPHRASE);
+        }
+
+        out.write(self.decrypted_buffer.as_bytes())?;
+        Ok(())
+    }
+}
+
+
 /// GPG cryptographic engine
 pub struct GpgCryptoEngine {
-    /// Internal engine handle
+    /// Internal engine handle.
     engine: gpgme::Gpgme,
 
-    /// Internal context
-    ctx: RefCell<gpgme::Context>
+    /// Internal context.
+    ctx: RefCell<gpgme::Context>,
+
+    /// Encrypted passphrase provider.
+    pwd: Option<RefCell<EncryptedPwd>>,
 }
 
 
@@ -57,7 +116,7 @@ impl GpgCryptoEngine {
     }
 
     /// Creates a cryptographic engine for bdgt and initializes it.
-    pub fn create<L: Location>(loc: &L, key: &<Self as CryptoEngine>::KeyId) -> Result<Self> {
+    pub fn create<L: Location>(loc: &L, key_id: &<Self as CryptoEngine>::KeyId) -> Result<Self> {
         //
         // Location for config may be absent
         //
@@ -65,7 +124,7 @@ impl GpgCryptoEngine {
         loc.create_if_absent()?;
         
         Self::new()
-            .and_then(|engine| engine.create_pwd(loc, key))
+            .and_then(|engine| engine.create_pwd(loc, key_id))
     }
 
     /// Opens a cryptographic engine for bdgt.
@@ -121,11 +180,15 @@ impl CryptoEngine for GpgCryptoEngine {
     }
     
     fn encrypt_hybrid(&self, key: &Self::Key, plaintext: &[u8]) -> Result<CryptoBuffer> {
+        self.decrypt_pwd(key)?;
+
         // TODO
         self.encrypt_asymmetric(key, plaintext)
     }
 
     fn decrypt_hybrid(&self, key: &Self::Key, ciphertext: &[u8]) -> Result<CryptoBuffer> {
+        self.decrypt_pwd(key)?;
+
         // TODO
         self.decrypt_asymmetric(key, ciphertext)
     }
@@ -138,16 +201,17 @@ impl GpgCryptoEngine {
 
         Ok(GpgCryptoEngine { 
             engine: gpgme::init(),
-            ctx: RefCell::new(ctx)
+            ctx: RefCell::new(ctx),
+            pwd: None,
         })
     }
 
-    fn create_pwd<L: Location>(mut self, loc: &L, key: &<Self as CryptoEngine>::KeyId) -> Result<Self> {
+    fn create_pwd<L: Location>(self, loc: &L, key_id: &<Self as CryptoEngine>::KeyId) -> Result<Self> {
         //
         // Check if key exists and suitable for encryption
         //
 
-        let key = self.lookup_key(key)?;
+        let key = self.lookup_key(key_id)?;
 
         //
         // Create strong password and write it in encrypted form to file
@@ -173,8 +237,10 @@ impl GpgCryptoEngine {
         self.open_pwd(loc)
     }
 
-    fn open_pwd<L: Location>(mut self, _loc: &L) -> Result<Self> {
-        // TODO
+    fn open_pwd<L: Location>(mut self, loc: &L) -> Result<Self> {
+        let encrypted_pwd = EncryptedPwd::new(&Self::pwd_file(loc))?;
+        self.pwd = Some(RefCell::new(encrypted_pwd));
+
         Ok(self)
     }
 
@@ -215,6 +281,20 @@ impl GpgCryptoEngine {
         key.is_suitable()
             .then_some(key)
             .ok_or(Error::from_message_with_extra(KEY_IS_NOT_SUITABLE, id.to_string()))
+    }
+
+    fn decrypt_pwd(&self, key: &<Self as CryptoEngine>::Key) -> Result<()> {
+        if self.pwd.is_none() {
+            return Err(Error::from_message(INVALID_ENGINE_STATE));
+        }
+
+        self.pwd
+            .as_ref()
+            .unwrap()
+            .borrow_mut()
+            .decrypt(key, self)?;
+
+        Ok(())
     }
 
     fn check_encryption_result(result: gpgme::EncryptionResult) -> Result<()> {

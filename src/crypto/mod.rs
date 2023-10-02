@@ -17,6 +17,9 @@ const MISSING_SECRET_KEY: &str = "Secret key is missing";
 /// Error message for invalid key.
 const KEY_IS_NOT_SUITABLE: &str = "Key is not suitable for bdgt";
 
+/// Error message for invalid engine state.
+const INVALID_ENGINE_STATE: &str = "Engine is in invalid state";
+
 /// Error message for encryption error.
 const ENCRYPTION_ERROR: &str = "An error occurred during encryption";
 
