@@ -570,8 +570,8 @@ impl DbStorage {
             id: row.get(0)?, 
             timestamp: row.get(1)?, 
             description: row.get(2)?, 
-            category_id: row.get(3)?, 
-            account_id: row.get(4)?, 
+            account_id: row.get(3)?, 
+            category_id: row.get(4)?, 
             amount: row.get(5)? 
         })
     }
