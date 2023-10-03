@@ -27,6 +27,17 @@ impl CryptoBuffer {
         CryptoBuffer { data: vec![0; size] }
     }
 
+    /// Appends one cryptographic buffer this one and returns a concatenated buffer.
+    /// 
+    /// Takes ownership on both of buffers (current and appended).
+    /// 
+    /// * `buffer` - something convertible to [`CryptoBuffer`]
+    pub fn append<B: Into<CryptoBuffer>>(mut self, buffer: B) -> CryptoBuffer {
+        let buffer: CryptoBuffer = buffer.into();
+        self.data.extend_from_slice(buffer.as_bytes());
+        self
+    }
+
     /// Returns read-only raw bytes of the stored data.
     pub fn as_bytes(&self) -> &[u8] {
         &self.data
