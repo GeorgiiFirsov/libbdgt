@@ -11,6 +11,12 @@ pub(crate) type Key<'a> = &'a [u8];
 /// Actual internal cipher implementation.
 /// For now `bdgt` uses AES-256 block cipher
 /// in GCM mode.
+/// 
+/// Nonce has length of 96 bits for the cipher.
+/// It seems to be secure, because non-negligible
+/// probability of repeating appears after
+/// generating 2 ^ 48 nonces, i.e. more than
+/// 280 billion nonces can be generated.
 type Cipher = aes_gcm::Aes256Gcm;
 
 
@@ -21,7 +27,7 @@ pub(crate) struct SymmetricCipher;
 impl SymmetricCipher {
     /// Obtain key size in bytes.
     pub fn key_size() -> usize {
-        aes_gcm::Aes256Gcm::key_size()
+        Cipher::key_size()
     }
 
     /// Encrypt a BLOB.
