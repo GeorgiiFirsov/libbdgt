@@ -9,8 +9,11 @@ license = "GPL-3.0-only"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+aes-gcm = "0.10.3"
+typenum = "1.17.0"
 chrono = "0.4.26"
 gpgme = "0.11.0"
 dirs = "5.0.1"
+rand = { version = "0.8.5", features = ["std_rng"] }
 uuid = { version = "1.4.1", features = ["v4"] }
 rusqlite = { version = "0.29.0", features = ["chrono"] }

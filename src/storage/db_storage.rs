@@ -109,14 +109,14 @@ impl DataStorage for DbStorage {
              WHERE transaction_id = ?1
         "#;
 
-        let result = self.query_with_params(statement_fmt, 
+        let mut result = self.query_with_params(statement_fmt, 
             rusqlite::params![transaction], Self::transaction_from_row)?;
 
         //
         // The only row is returned here
         //
 
-        Ok(result[0].clone())
+        Ok(result.remove(0))
     }
 
     fn transactions(&self) -> Result<Vec<EncryptedTransaction>> {
@@ -284,14 +284,14 @@ impl DataStorage for DbStorage {
              WHERE account_id = ?1
         "#;
 
-        let result = self.query_with_params(statement_fmt, 
+        let mut result = self.query_with_params(statement_fmt, 
             rusqlite::params![account], Self::account_from_row)?;
 
         //
         // The only row is returned here
         //
 
-        Ok(result[0].clone())
+        Ok(result.remove(0))
     }
 
     fn accounts(&self) -> Result<Vec<EncryptedAccount>> {
@@ -348,14 +348,14 @@ impl DataStorage for DbStorage {
              WHERE category_id = ?1
         "#;
 
-        let result = self.query_with_params(statement_fmt, 
+        let mut result = self.query_with_params(statement_fmt, 
             rusqlite::params![category], Self::category_from_row)?;
         
         //
         // The only row is returned here
         //
 
-        Ok(result[0].clone())
+        Ok(result.remove(0))
     }
 
     fn categories(&self) -> Result<Vec<EncryptedCategory>> {
@@ -425,14 +425,14 @@ impl DataStorage for DbStorage {
              WHERE plan_id = ?1
         "#;
 
-        let result = self.query_with_params(statement_fmt, 
+        let mut result = self.query_with_params(statement_fmt, 
             rusqlite::params![plan], Self::plan_from_row)?;
         
         //
         // The only row is returned here
         //
 
-        Ok(result[0].clone())
+        Ok(result.remove(0))
     }
 
     fn plans(&self) -> Result<Vec<EncryptedPlan>> {

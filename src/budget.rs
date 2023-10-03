@@ -317,14 +317,14 @@ where
             .decrypt(&self.key, data)?;
 
         Ok(
-            String::from_utf8_lossy(decrypted.as_raw())
+            String::from_utf8_lossy(decrypted.as_bytes())
                 .to_string()
         )
     }
 
     fn encrypt_isize(&self, data: &isize) -> Result<CryptoBuffer> {
         self.crypto_engine
-            .encrypt(&self.key, data.to_le_bytes().as_slice())
+            .encrypt(&self.key, &data.to_le_bytes())
     }
 
     fn decrypt_isize(&self, data: &[u8]) -> Result<isize> {
@@ -332,7 +332,7 @@ where
             .decrypt(&self.key, data)?;
 
         let bytes = decrypted
-            .as_raw()
+            .as_bytes()
             .try_into()
             .map_err(|e: TryFromSliceError| Error::from_message(e.to_string()))?;
 
@@ -346,16 +346,16 @@ where
         Ok(EncryptedTransaction {
             id: transaction.id,
             timestamp: transaction.timestamp,
-            description: encrypted_description.as_raw().into(),
+            description: encrypted_description.as_bytes().into(),
             account_id: transaction.account_id,
             category_id: transaction.category_id,
-            amount: encrypted_amount.as_raw().into()
+            amount: encrypted_amount.as_bytes().into()
         })
     }
 
     fn decrypt_transaction(&self, encrypted_transaction: &EncryptedTransaction) -> Result<Transaction> {
-        let decrypted_description = self.decrypt_string(encrypted_transaction.description.as_slice())?;
-        let decrypted_amount = self.decrypt_isize(encrypted_transaction.amount.as_slice())?;
+        let decrypted_description = self.decrypt_string(&encrypted_transaction.description)?;
+        let decrypted_amount = self.decrypt_isize(&encrypted_transaction.amount)?;
 
         Ok(Transaction {
             id: encrypted_transaction.id,
@@ -373,14 +373,14 @@ where
 
         Ok(EncryptedAccount { 
             id: account.id,
-            name: encrypted_name.as_raw().into(), 
-            balance: encrypted_balance.as_raw().into() 
+            name: encrypted_name.as_bytes().into(), 
+            balance: encrypted_balance.as_bytes().into() 
         })
     }
 
     fn decrypt_account(&self, encrypted_account: &EncryptedAccount) -> Result<Account> {
-        let decrypted_name = self.decrypt_string(encrypted_account.name.as_slice())?;
-        let decrypted_balance = self.decrypt_isize(encrypted_account.balance.as_slice())?;
+        let decrypted_name = self.decrypt_string(&encrypted_account.name)?;
+        let decrypted_balance = self.decrypt_isize(&encrypted_account.balance)?;
 
         Ok(Account { 
             id: encrypted_account.id,
@@ -394,13 +394,13 @@ where
 
         Ok(EncryptedCategory {
             id: category.id,
-            name: encrypted_name.as_raw().into(),
+            name: encrypted_name.as_bytes().into(),
             category_type: category.category_type
         })
     }
 
     fn decrypt_category(&self, encrypted_category: &EncryptedCategory) -> Result<Category> {
-        let decrypted_category = self.decrypt_string(encrypted_category.name.as_slice())?;
+        let decrypted_category = self.decrypt_string(&encrypted_category.name)?;
 
         Ok(Category { 
             id: encrypted_category.id,
@@ -416,14 +416,14 @@ where
         Ok(EncryptedPlan { 
             id: plan.id, 
             category_id: plan.category_id, 
-            name: encrypted_name.as_raw().into(), 
-            amount_limit: encrypted_amount_limit.as_raw().into()
+            name: encrypted_name.as_bytes().into(), 
+            amount_limit: encrypted_amount_limit.as_bytes().into()
         })
     }
 
     fn decrypt_plan(&self, encrypted_plan: &EncryptedPlan) -> Result<Plan> {
-        let decrypted_name = self.decrypt_string(encrypted_plan.name.as_slice())?;
-        let decrypted_amount_limit = self.decrypt_isize(encrypted_plan.amount_limit.as_slice())?;
+        let decrypted_name = self.decrypt_string(&encrypted_plan.name)?;
+        let decrypted_amount_limit = self.decrypt_isize(&encrypted_plan.amount_limit)?;
 
         Ok(Plan { 
             id: encrypted_plan.id, 

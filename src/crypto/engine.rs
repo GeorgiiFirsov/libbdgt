@@ -2,7 +2,12 @@ use crate::error::Result;
 use super::buffer::CryptoBuffer;
 
 
-/// Cryptographic engine trait
+/// Cryptographic engine trait. 
+/// 
+/// This trait is very generic. It does not specify, how
+/// encryption is performed, i.e. encryption can be symmetric,
+/// asymmetric or hybrid. Furthermore, engine can support
+/// different encryption types depending on key type.
 pub trait CryptoEngine {
     /// Key identifier wrapper type, that hides engine-specific stuff behind.
     type KeyId;
@@ -16,22 +21,22 @@ pub trait CryptoEngine {
     /// Returns a version of cryptographic engine.
     fn version(&self) -> &'static str;
 
-    /// Looks for a key with specific identifier.
+    /// Looks for a key with specific identifier in engine's key storage.
     /// 
     /// Key is returned if and only if it exists and is suitable for bdgt.
     /// 
     /// * `id` - identifier of a key to look for
     fn lookup_key(&self, id: &Self::KeyId) -> Result<Self::Key>;
 
-    /// Encrypts a BLOB using a public key.
+    /// Encrypts a BLOB using a provided key.
     /// 
-    /// * `key` - handle to a public key, taht is intended to be used for encryption
+    /// * `key` - handle to a key.
     /// * `plaintext` - data to encrypt
     fn encrypt(&self, key: &Self::Key, plaintext: &[u8]) -> Result<CryptoBuffer>;
 
-    /// Decrypts a BLOB using a private key.
+    /// Decrypts a BLOB using a provided key.
     /// 
-    /// * `key` - handle to a private key, taht is intended to be used for decryption
-    /// * `plaintext` - data to decrypt
+    /// * `key` - handle to a key.
+    /// * `ciphertext` - data to decrypt
     fn decrypt(&self, key: &Self::Key, ciphertext: &[u8]) -> Result<CryptoBuffer>;
 }
