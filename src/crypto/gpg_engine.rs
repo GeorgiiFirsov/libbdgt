@@ -1,8 +1,6 @@
 use std::ffi::CString;
 use std::cell::{RefCell, RefMut};
 
-use rand::RngCore;
-
 use crate::error::{Error, Result};
 use crate::location::Location;
 use super::prng::generate_random;

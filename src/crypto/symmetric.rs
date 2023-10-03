@@ -1,11 +1,10 @@
+use typenum::Unsigned;
+use aes_gcm::aead::Aead;
 use aes_gcm::{KeySizeUser, AeadCore, KeyInit};
 
 use crate::error::Result;
+use super::prng::create_prng;
 use super::buffer::CryptoBuffer;
-
-
-/// Type of key buffer for symmetric cipher.
-pub(crate) type Key<'a> = &'a [u8];
 
 
 /// Actual internal cipher implementation.
@@ -18,6 +17,18 @@ pub(crate) type Key<'a> = &'a [u8];
 /// generating 2 ^ 48 nonces, i.e. more than
 /// 280 billion nonces can be generated.
 type Cipher = aes_gcm::Aes256Gcm;
+
+
+/// Type of key buffer for symmetric cipher.
+type Key = aes_gcm::Key<Cipher>;
+
+
+/// Type that represents a size of nonce.
+type NonceSize = <Cipher as AeadCore>::NonceSize;
+
+
+/// Type of nonce.
+type Nonce = aes_gcm::Nonce<NonceSize>;
 
 
 /// Symmetric cipher interface.
@@ -34,17 +45,33 @@ impl SymmetricCipher {
     /// 
     /// * `key` - key used to encrypt data.
     /// * `plaintext` - data to encrypt.
-    pub fn encrypt(_key: Key, plaintext: &[u8]) -> Result<CryptoBuffer> {
-        // TODO
-        Ok(CryptoBuffer::from(plaintext))
+    pub fn encrypt(key: &[u8], plaintext: &[u8]) -> Result<CryptoBuffer> {
+        let nonce = Cipher::generate_nonce(create_prng());
+
+        let key = Key::from_slice(key);
+        let cipher = Cipher::new(&key);
+
+        let ciphertext = cipher.encrypt(&nonce, plaintext)?;
+        
+        Ok(
+            CryptoBuffer::from(nonce.as_slice())
+                .append(ciphertext)
+        )
     }
 
     /// Decrypt a BLOB.
     /// 
     /// * `key` - key used to decrypt data.
     /// * `ciphertext` - data to decrypt.
-    pub fn decrypt(_key: Key, ciphertext: &[u8]) -> Result<CryptoBuffer> {
-        // TODO
-        Ok(CryptoBuffer::from(ciphertext))
+    pub fn decrypt(key: &[u8], ciphertext: &[u8]) -> Result<CryptoBuffer> {
+        let (nonce, ciphertext) = ciphertext.split_at(NonceSize::USIZE);
+        let nonce = Nonce::from_slice(nonce);
+
+        let key = Key::from_slice(key);
+        let cipher = Cipher::new(&key);
+
+        let plaintext = cipher.decrypt(&nonce, ciphertext)?;
+        
+        Ok(CryptoBuffer::from(plaintext))
     }
 }

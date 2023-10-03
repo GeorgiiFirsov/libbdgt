@@ -7,6 +7,7 @@ extern crate uuid;
 extern crate rand;
 extern crate gpgme;
 extern crate chrono;
+extern crate typenum;
 extern crate aes_gcm;
 extern crate rusqlite;
 
