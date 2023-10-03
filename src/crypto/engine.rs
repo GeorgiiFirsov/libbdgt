@@ -3,6 +3,11 @@ use super::buffer::CryptoBuffer;
 
 
 /// Cryptographic engine trait. 
+/// 
+/// This trait is very generic. It does not specify, how
+/// encryption is performed, i.e. encryption can be symmetric,
+/// asymmetric or hybrid. Furthermore, engine can support
+/// different encryption types depending on key type.
 pub trait CryptoEngine {
     /// Key identifier wrapper type, that hides engine-specific stuff behind.
     type KeyId;
@@ -16,7 +21,7 @@ pub trait CryptoEngine {
     /// Returns a version of cryptographic engine.
     fn version(&self) -> &'static str;
 
-    /// Looks for a key with specific identifier.
+    /// Looks for a key with specific identifier in engine's key storage.
     /// 
     /// Key is returned if and only if it exists and is suitable for bdgt.
     /// 

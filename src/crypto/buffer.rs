@@ -1,9 +1,3 @@
-/// Provides method of constructing a value with invalidating of source.
-pub trait DestructiveFrom<T> {
-    /// Construct object and invalidate source.
-    fn destructive_from(value: &mut T) -> Self;
-}
-
 /// Struct for wrapping a sensitive data.
 /// 
 /// Implements [`core::ops::Drop`] trait, that erases internal 
@@ -92,19 +86,5 @@ impl From<Vec<u8>> for CryptoBuffer {
 impl From<&[u8]> for CryptoBuffer {
     fn from(value: &[u8]) -> Self {
         Self { data: Vec::from(value) }
-    }
-}
-
-
-impl DestructiveFrom<String> for CryptoBuffer {
-    fn destructive_from(value: &mut String) -> Self {
-        let buffer = Self{ data: Vec::from(value.as_bytes()) };
-        
-        //
-        // Destroy source and return constructed buffer
-        //
-
-        unsafe { Self::destroy_data(value.as_bytes_mut()) };
-        buffer
     }
 }

@@ -27,3 +27,6 @@ const ENCRYPTION_ERROR: &str = "An error occurred during encryption";
 
 /// Error message for decryption error.
 const DECRYPTION_ERROR: &str = "An error occurred during decryption";
+
+/// Malformed symmetric key.
+const INVALID_SYMMETRIC_KEY: &str = "Invalid symmetric key provided";

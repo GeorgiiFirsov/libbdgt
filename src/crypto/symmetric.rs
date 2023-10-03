@@ -2,9 +2,10 @@ use typenum::Unsigned;
 use aes_gcm::aead::Aead;
 use aes_gcm::{KeySizeUser, AeadCore, KeyInit};
 
-use crate::error::Result;
-use super::prng::create_prng;
+use crate::error::{Result, Error};
+use super::prng::Prng;
 use super::buffer::CryptoBuffer;
+use super::INVALID_SYMMETRIC_KEY;
 
 
 /// Actual internal cipher implementation.
@@ -31,11 +32,29 @@ type NonceSize = <Cipher as AeadCore>::NonceSize;
 type Nonce = aes_gcm::Nonce<NonceSize>;
 
 
-/// Symmetric cipher interface.
-pub(crate) struct SymmetricCipher;
+/// Symmetric cipher interface. 
+pub(crate) struct SymmetricCipher {
+    /// Internal cipher implementation.
+    cipher: Cipher,
+}
 
 
 impl SymmetricCipher {
+    /// Create a new cipher instance using specific key.
+    /// 
+    /// Key MUST have size equal to the cipher's required key size.
+    /// 
+    /// * `key` - key used to encrypt or decrypt data
+    pub fn new(key: &[u8]) -> Result<Self> {
+        if key.len() != Self::key_size() {
+            return Err(Error::from_message(INVALID_SYMMETRIC_KEY));
+        }
+
+        Ok(SymmetricCipher { 
+            cipher: Cipher::new(&Key::from_slice(key)) 
+        })
+    }
+
     /// Obtain key size in bytes.
     pub fn key_size() -> usize {
         Cipher::key_size()
@@ -43,15 +62,12 @@ impl SymmetricCipher {
 
     /// Encrypt a BLOB.
     /// 
-    /// * `key` - key used to encrypt data.
     /// * `plaintext` - data to encrypt.
-    pub fn encrypt(key: &[u8], plaintext: &[u8]) -> Result<CryptoBuffer> {
-        let nonce = Cipher::generate_nonce(create_prng());
+    pub fn encrypt(&self, plaintext: &[u8]) -> Result<CryptoBuffer> {
+        let nonce = Cipher::generate_nonce(Prng::new());
 
-        let key = Key::from_slice(key);
-        let cipher = Cipher::new(&key);
-
-        let ciphertext = cipher.encrypt(&nonce, plaintext)?;
+        let ciphertext = self.cipher
+            .encrypt(&nonce, plaintext)?;
         
         Ok(
             CryptoBuffer::from(nonce.as_slice())
@@ -61,16 +77,13 @@ impl SymmetricCipher {
 
     /// Decrypt a BLOB.
     /// 
-    /// * `key` - key used to decrypt data.
     /// * `ciphertext` - data to decrypt.
-    pub fn decrypt(key: &[u8], ciphertext: &[u8]) -> Result<CryptoBuffer> {
+    pub fn decrypt(&self, ciphertext: &[u8]) -> Result<CryptoBuffer> {
         let (nonce, ciphertext) = ciphertext.split_at(NonceSize::USIZE);
         let nonce = Nonce::from_slice(nonce);
 
-        let key = Key::from_slice(key);
-        let cipher = Cipher::new(&key);
-
-        let plaintext = cipher.decrypt(&nonce, ciphertext)?;
+        let plaintext = self.cipher
+            .decrypt(&nonce, ciphertext)?;
         
         Ok(CryptoBuffer::from(plaintext))
     }

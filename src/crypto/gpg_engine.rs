@@ -3,7 +3,7 @@ use std::cell::{RefCell, RefMut};
 
 use crate::error::{Error, Result};
 use crate::location::Location;
-use super::prng::generate_random;
+use super::prng::Prng;
 use super::engine::CryptoEngine;
 use super::buffer::CryptoBuffer;
 use super::symmetric::SymmetricCipher;
@@ -72,6 +72,10 @@ impl EncryptedKey {
     /// * `engine` - engine used to decrypt passphrase
     pub fn decrypt(&mut self, key: &<GpgCryptoEngine as CryptoEngine>::Key, engine: &GpgCryptoEngine) -> Result<()> {
         if self.decrypted_buffer.is_empty() {
+            //
+            // Decrypt key once and remember
+            //
+
             self.decrypted_buffer = engine.decrypt_asymmetric(
                 key, self.encrypted_buffer.as_bytes())?;
         }
@@ -85,12 +89,13 @@ impl EncryptedKey {
 /// 
 /// This engine in fact uses GPG keys to wrap a symmetric key, that
 /// is used to perform actual cryptographic transformations via 
-/// [`CryptoEngine::encrypt_hybrid`] and [`CryptoEngine::decrypt_hybrid`]
-/// functions.
+/// [`CryptoEngine::encrypt`] and [`CryptoEngine::decrypt`] functions.
 /// 
 /// Asymmetric encryption functions are used to wrap the symmetric key.
 /// This key is generated randomly at creation stage and saved in
 /// encrypted form to file.
+/// 
+/// In another word, [`GpgCryptoEngine`] performs hybrid encryption.
 pub struct GpgCryptoEngine {
     /// Internal engine handle.
     engine: gpgme::Gpgme,
@@ -153,12 +158,16 @@ impl CryptoEngine for GpgCryptoEngine {
     
     fn encrypt(&self, key: &Self::Key, plaintext: &[u8]) -> Result<CryptoBuffer> {
         let symmetric_key = self.decrypt_symmetric_key(key)?;
-        SymmetricCipher::encrypt(symmetric_key.decrypted_buffer.as_bytes(), plaintext)
+
+        let cipher = SymmetricCipher::new(symmetric_key.decrypted_buffer.as_bytes())?;
+        cipher.encrypt(plaintext)
     }
 
     fn decrypt(&self, key: &Self::Key, ciphertext: &[u8]) -> Result<CryptoBuffer> {
         let symmetric_key = self.decrypt_symmetric_key(key)?;
-        SymmetricCipher::decrypt(symmetric_key.decrypted_buffer.as_bytes(), ciphertext)
+
+        let cipher = SymmetricCipher::new(symmetric_key.decrypted_buffer.as_bytes())?;
+        cipher.decrypt(ciphertext)
     }
 }
 
@@ -187,7 +196,8 @@ impl GpgCryptoEngine {
         //
 
         let mut symmetric_key = CryptoBuffer::new_with_size(SymmetricCipher::key_size());
-        generate_random(symmetric_key.as_mut_bytes())?;
+        Prng::new()
+            .generate(symmetric_key.as_mut_bytes())?;
 
         let encrypted_key = self.encrypt_asymmetric(&key, symmetric_key.as_bytes())?;
         std::fs::write(Self::symmetric_key_file(loc), encrypted_key.as_bytes())?;
