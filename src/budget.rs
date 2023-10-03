@@ -146,6 +146,22 @@ where
             .collect()
     }
 
+    /// Return all transactions between a given time points (including start 
+    /// of the interval and excluding the end) sorted by timestamp in 
+    /// descending order.
+    /// 
+    /// Used for optimization.
+    /// 
+    /// * `start_timestamp` - point in time to start from
+    /// * `end_timestamp` - point in time to end before
+    pub fn transactions_between(&self, start_timestamp: Timestamp, end_timestamp: Timestamp) -> Result<Vec<Transaction>> {
+        let encrypted_transactions = self.storage.transactions_between(start_timestamp, end_timestamp)?;
+        encrypted_transactions
+            .iter()
+            .map(|transaction| self.decrypt_transaction(transaction))
+            .collect() 
+    }
+
     /// Return all transactions bound with a given account sorted by timestamp 
     /// in descending order.
     /// 
