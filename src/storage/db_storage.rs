@@ -2,6 +2,7 @@ use crate::error::{Result, Error};
 use crate::location::Location;
 use super::data::{EncryptedTransaction, EncryptedCategory, EncryptedAccount, EncryptedPlan, Id, Timestamp, CategoryType};
 use super::storage::DataStorage;
+use super::CONSISTENCY_VIOLATION;
 
 
 /// Implementation of [`rusqlite::types::ToSql`] trait for [`CategoryType`].
@@ -79,25 +80,26 @@ impl DbStorage {
 impl DataStorage for DbStorage {
     fn add_transaction(&self, transaction: EncryptedTransaction) -> Result<Id> {
         let statement_fmt = r#"
-            INSERT INTO transactions (timestamp, description, account_id, category_id, amount)
-            VALUES (?1, ?2, ?3, ?4, ?5)
+            INSERT INTO transactions (timestamp, description, account_id, category_id, amount, _change_timestamp)
+            VALUES (?1, ?2, ?3, ?4, ?5, ?6)
         "#;
-
+        
         self.db
             .execute(statement_fmt, rusqlite::params![transaction.timestamp, transaction.description, 
-                transaction.account_id, transaction.category_id, transaction.amount])?;
+                transaction.account_id, transaction.category_id, transaction.amount, Self::current_datetime()])?;
 
         Ok(self.last_inserted_id())
     }
 
     fn remove_transaction(&self, transaction: Id) -> Result<()> {
         let statement_fmt = r#"
-            DELETE FROM transactions
-             WHERE transaction_id = ?1
+            UPDATE transactions
+               SET _removal_timestamp = ?1
+             WHERE transaction_id = ?2
         "#;
 
         self.db
-            .execute(statement_fmt, rusqlite::params![transaction])?;
+            .execute(statement_fmt, rusqlite::params![Self::current_datetime(), transaction])?;
 
         Ok(())
     }
@@ -226,12 +228,12 @@ impl DataStorage for DbStorage {
 
     fn add_account(&self, account: EncryptedAccount) -> Result<Id> {
         let statement_fmt = r#"
-            INSERT INTO accounts (name, balance)
-            VALUES (?1, ?2)
+            INSERT INTO accounts (name, balance, _change_timestamp)
+            VALUES (?1, ?2, ?3)
         "#;
 
         self.db
-            .execute(statement_fmt, rusqlite::params![account.name, account.balance])?;
+            .execute(statement_fmt, rusqlite::params![account.name, account.balance, Self::current_datetime()])?;
 
         Ok(self.last_inserted_id())
     }
@@ -240,12 +242,13 @@ impl DataStorage for DbStorage {
         let statement_fmt = r#"
             UPDATE accounts
                SET name = ?1,
-                   balance = ?2
-             WHERE account_id = ?3
+                   balance = ?2, 
+                   _change_timestamp = ?3
+             WHERE account_id = ?4
         "#;
 
         self.db
-            .execute(statement_fmt, rusqlite::params![account.name, account.balance, account.id])?;
+            .execute(statement_fmt, rusqlite::params![account.name, account.balance, Self::current_datetime(), account.id])?;
 
         Ok(())
     }
@@ -258,21 +261,30 @@ impl DataStorage for DbStorage {
             //
 
             let statement_fmt = r#"
-                DELETE FROM transactions
-                 WHERE account_id = ?1
+                UPDATE transactions
+                   SET _removal_timestamp = ?1
+                 WHERE account_id = ?2
             "#;
 
             self.db
-                .execute(statement_fmt, rusqlite::params![account])?;
+                .execute(statement_fmt, rusqlite::params![Self::current_datetime(), account])?;
         }
 
+        //
+        // Check if we can delete account: no transaction should belong to it.
+        // Only after that I can remove account
+        //
+
+        self.ensure_consistency("transactions", "account_id", account)?;
+
         let statement_fmt = r#"
-            DELETE FROM accounts
-             WHERE account_id = ?1
+            UPDATE accounts
+               SET _removal_timestamp = ?1
+             WHERE account_id = ?2
         "#;
 
         self.db
-            .execute(statement_fmt, rusqlite::params![account])?;
+            .execute(statement_fmt, rusqlite::params![Self::current_datetime(), account])?;
 
         Ok(())
     }
@@ -305,12 +317,12 @@ impl DataStorage for DbStorage {
 
     fn add_category(&self, category: EncryptedCategory) -> Result<Id> {
         let statement_fmt = r#"
-            INSERT INTO categories (name, type)
-            VALUES (?1, ?2)
+            INSERT INTO categories (name, type, _change_timestamp)
+            VALUES (?1, ?2, ?3)
         "#;
 
         self.db
-            .execute(statement_fmt, rusqlite::params![category.name, category.category_type])?;
+            .execute(statement_fmt, rusqlite::params![category.name, category.category_type, Self::current_datetime()])?;
 
         Ok(self.last_inserted_id())
     }
@@ -319,24 +331,33 @@ impl DataStorage for DbStorage {
         let statement_fmt = r#"
             UPDATE categories
                SET name = ?1,
-                   type = ?2
-             WHERE category_id = ?3
+                   type = ?2, 
+                   _change_timestamp = ?3
+             WHERE category_id = ?4
         "#;
 
         self.db
-            .execute(statement_fmt, rusqlite::params![category.name, category.category_type, category.id])?;
+            .execute(statement_fmt, rusqlite::params![category.name, category.category_type, Self::current_datetime(), category.id])?;
 
         Ok(())
     }
 
     fn remove_category(&self, category: Id) -> Result<()> {
+        //
+        // Check if no transactions and plans reference this category
+        //
+
+        self.ensure_consistency("transactions", "category_id", category)?;
+        self.ensure_consistency("plans", "category_id", category)?;
+
         let statement_fmt = r#"
-            DELETE FROM categories
-             WHERE category_id = ?1
+            UPDATE categories
+               SET _removal_timestamp = ?1
+             WHERE category_id = ?2
         "#;
 
         self.db
-            .execute(statement_fmt, rusqlite::params![category])?;
+            .execute(statement_fmt, rusqlite::params![Self::current_datetime(), category])?;
 
         Ok(())
     }
@@ -381,12 +402,12 @@ impl DataStorage for DbStorage {
 
     fn add_plan(&self, plan: EncryptedPlan) -> Result<Id> {
         let statement_fmt = r#"
-            INSERT INTO plans (category_id, name, amount_limit)
-            VALUES (?1, ?2, ?3)
+            INSERT INTO plans (category_id, name, amount_limit, _change_timestamp)
+            VALUES (?1, ?2, ?3, ?4)
         "#;
 
         self.db
-            .execute(statement_fmt, rusqlite::params![plan.category_id, plan.name, plan.amount_limit])?;
+            .execute(statement_fmt, rusqlite::params![plan.category_id, plan.name, plan.amount_limit, Self::current_datetime()])?;
 
         Ok(self.last_inserted_id())
     }
@@ -396,24 +417,27 @@ impl DataStorage for DbStorage {
             UPDATE plans
                SET category_id = ?1,
                    name = ?2,
-                   amount_limit = ?3
-             WHERE plan_id = ?4
+                   amount_limit = ?3, 
+                   _change_timestamp = ?4
+             WHERE plan_id = ?5
         "#;
 
         self.db
-            .execute(statement_fmt, rusqlite::params![plan.category_id, plan.name, plan.amount_limit, plan.id])?;
+            .execute(statement_fmt, rusqlite::params![plan.category_id, 
+                plan.name, plan.amount_limit, Self::current_datetime(), plan.id])?;
 
         Ok(())
     }
 
     fn remove_plan(&self, plan: Id) -> Result<()> {
         let statement_fmt = r#"
-            DELETE FROM plans
-             WHERE plan_id = ?1
+            UPDATE plans
+               SET _removal_timestamp = ?1
+             WHERE plan_id = ?2
         "#;
 
         self.db
-            .execute(statement_fmt, rusqlite::params![plan])?;
+            .execute(statement_fmt, rusqlite::params![Self::current_datetime(), plan])?;
 
         Ok(())
     }
@@ -454,6 +478,27 @@ impl DataStorage for DbStorage {
 
         self.query_with_params(statement_fmt, rusqlite::params![category], Self::plan_from_row)
     }
+
+    fn clean_removed(&self) -> Result<()> {
+        let statement = r#"
+            DELETE FROM plans
+             WHERE _removal_timestamp IS NOT NULL;
+
+            DELETE FROM transactions
+             WHERE _removal_timestamp IS NOT NULL;
+            
+            DELETE FROM categories
+             WHERE _removal_timestamp IS NOT NULL;
+
+            DELETE FROM accounts
+             WHERE _removal_timestamp IS NOT NULL;
+        "#;
+
+        self.db
+            .execute_batch(statement)?;
+        
+        Ok(())
+    }
 }
 
 
@@ -466,44 +511,81 @@ impl DbStorage {
         // additionally indexed by its type, transactions table --
         // by timestamp, plans table -- by category.
         //
+        // Each table has two internal columns: `_change_timestamp`
+        // and `_removal_timestamp`, that are suitable for syncing
+        // content between different instances of the app.
+        // All tables are addtionally indexed by mentioned timestamps.
+        //
 
         let create_statement = r#"
             CREATE TABLE accounts (
-                account_id      INTEGER     PRIMARY KEY AUTOINCREMENT,
-                balance         BYTEA       NOT NULL,
-                name            BYTEA       NOT NULL
-            );
-                
-            CREATE TABLE categories (
-                category_id     INTEGER     PRIMARY KEY AUTOINCREMENT,
-                name            BYTEA       NOT NULL,
-                type            TINYINT     NOT NULL
-            );
-                
-            CREATE TABLE transactions (
-                transaction_id  INTEGER     PRIMARY KEY AUTOINCREMENT,
-                timestamp       DATETIME    NOT NULL,
-                description     BYTEA       NOT NULL,    
-                account_id      INTEGER     REFERENCES accounts(account_id),
-                category_id     INTEGER     REFERENCES categories(category_id),
-                amount          BYTEA       NOT NULL
+                account_id          INTEGER     PRIMARY KEY AUTOINCREMENT,
+                balance             BYTEA       NOT NULL,
+                name                BYTEA       NOT NULL,
+                _change_timestamp   DATETIME    NOT NULL,
+                _removal_timestamp  DATETIME    NULL
             );
 
-            CREATE TABLE plans (
-                plan_id         INTEGER     PRIMARY KEY AUTOINCREMENT,
-                category_id     INTEGER     REFERENCES categories(category_id),
-                name            BYTEA       NOT NULL,
-                amount_limit    BYTEA       NOT NULL
+            CREATE INDEX accounts_by_change_timestamp
+                ON accounts (_change_timestamp);
+
+            CREATE INDEX accounts_by_removal_timestamp
+                ON accounts (_removal_timestamp);
+                
+            CREATE TABLE categories (
+                category_id         INTEGER     PRIMARY KEY AUTOINCREMENT,
+                name                BYTEA       NOT NULL,
+                type                TINYINT     NOT NULL,
+                _change_timestamp   DATETIME    NOT NULL,
+                _removal_timestamp  DATETIME    NULL
+            );
+
+            CREATE INDEX categories_by_type
+                ON categories (type);
+
+            CREATE INDEX categories_by_change_timestamp
+                ON categories (_change_timestamp);
+
+            CREATE INDEX categories_by_removal_timestamp
+                ON categories (_removal_timestamp);
+                
+            CREATE TABLE transactions (
+                transaction_id      INTEGER     PRIMARY KEY AUTOINCREMENT,
+                timestamp           DATETIME    NOT NULL,
+                description         BYTEA       NOT NULL,    
+                account_id          INTEGER     REFERENCES accounts(account_id),
+                category_id         INTEGER     REFERENCES categories(category_id),
+                amount              BYTEA       NOT NULL,
+                _change_timestamp   DATETIME    NOT NULL,
+                _removal_timestamp  DATETIME    NULL
             );
 
             CREATE INDEX transactions_by_timestamp
                 ON transactions (timestamp);
 
-            CREATE INDEX categories_by_type
-                ON categories (type);
+            CREATE INDEX transactions_by_change_timestamp
+                ON transactions (_change_timestamp);
+
+            CREATE INDEX transactions_by_removal_timestamp
+                ON transactions (_removal_timestamp);
+
+            CREATE TABLE plans (
+                plan_id             INTEGER     PRIMARY KEY AUTOINCREMENT,
+                category_id         INTEGER     REFERENCES categories(category_id),
+                name                BYTEA       NOT NULL,
+                amount_limit        BYTEA       NOT NULL,
+                _change_timestamp   DATETIME    NOT NULL,
+                _removal_timestamp  DATETIME    NULL
+            );
 
             CREATE INDEX plans_by_category
                 ON plans (category_id);
+
+            CREATE INDEX plans_by_change_timestamp
+                ON plans (_change_timestamp);
+
+            CREATE INDEX plans_by_removal_timestamp
+                ON plans (_removal_timestamp);
         "#;
 
         self.db
@@ -539,11 +621,34 @@ impl DbStorage {
         self.query_with_params(statement, [], convert)
     }
 
+    fn ensure_consistency(&self, table: &str, foreign_key: &str, foreign_key_value: Id) -> Result<()> {
+        let statement_fmt = format!(r#"
+            SELECT COUNT(*) FROM {}
+             WHERE _removal_timestamp IS NOT NULL
+               AND {} = ?1
+            "#, table, foreign_key);
+
+        let count: usize = self.db
+            .query_row(statement_fmt.as_str(), rusqlite::params![foreign_key_value], 
+                |row| row.get(0))?;
+
+        if 0 < count {
+            return Err(Error::from_message_with_extra(CONSISTENCY_VIOLATION,
+                format!("Table: {}, foreign key: {}", table, foreign_key)));
+        }
+
+        Ok(())
+    }
+
     fn last_inserted_id(&self) -> Id {
         let id = self.db
             .last_insert_rowid();
 
         id as Id
+    }
+
+    fn current_datetime() -> Timestamp {
+        chrono::Utc::now()
     }
 }
 

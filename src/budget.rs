@@ -314,6 +314,15 @@ where
             .map(|plan| self.decrypt_plan(plan))
             .collect()
     }
+
+    /// Delete permanently all previously removed items.
+    /// 
+    /// Actually `remove_*` functions can perform no removal, e.g.
+    /// just mark items as removed. This function therefore permanently
+    /// deletes such marked items.
+    pub fn clean_removed(&self) -> Result<()> {
+        self.storage.clean_removed()
+    }
 }
 
 

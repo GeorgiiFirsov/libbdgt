@@ -181,4 +181,11 @@ pub trait DataStorage {
     /// 
     /// * `category` - category to return plans for
     fn plans_for(&self, category: Id) -> Result<Vec<EncryptedPlan>>;
+
+    /// Delete permanently all previously removed items.
+    /// 
+    /// Actually `remove_*` functions can perform no removal, e.g.
+    /// just mark items as removed. This function therefore permanently
+    /// deletes such marked items.
+    fn clean_removed(&self) -> Result<()>;
 }
