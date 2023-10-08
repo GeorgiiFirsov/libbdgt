@@ -17,4 +17,12 @@ pub trait SyncEngine {
     /// 
     /// * `remote` - url or another remote identifier
     fn add_remote(&self, remote: &str) -> Result<()>;
+
+    /// Remove existing remote.
+    fn remove_remote(&self) -> Result<()>;
+
+    /// Changes existing remote.
+    /// 
+    /// * `remote` - url or another remote identifier
+    fn change_remote(&self, remote: &str) -> Result<()>;
 }

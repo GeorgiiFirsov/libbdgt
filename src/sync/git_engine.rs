@@ -5,6 +5,25 @@ use super::syncable::{Syncable, Diff};
 use super::REMOTE_ALREADY_EXIST;
 
 
+/// Name of git's remote for the repository.
+const REMOTE_NAME: &str = "origin";
+
+/// Name of reference to update on commit.
+const REF_NAME: &str = "HEAD";
+
+/// Name of configuration parameter that contains a username.
+const CFG_NAME: &str = "name";
+
+/// Name of configuration parameter that contains an email.
+const  CFG_EMAIL: &str = "email";
+
+/// Synchronization folder.
+const SYNC_FORDER: &str = "sync";
+
+/// Repository folder.
+const SYNC_REPO: &str = "repository";
+
+
 /// Synchronization engine that uses git internally.
 pub struct GitSyncEngine {
     /// Repository handle.
@@ -85,7 +104,7 @@ impl SyncEngine for GitSyncEngine {
         self.push_remote()
     }
 
-    fn add_remote(&self, _remote: &str) -> Result<()> {
+    fn add_remote(&self, remote: &str) -> Result<()> {
         let remotes_present = self.repo
             .remotes()
             .map(|remotes| !remotes.is_empty())?;
@@ -94,7 +113,22 @@ impl SyncEngine for GitSyncEngine {
             return Err(Error::from_message(REMOTE_ALREADY_EXIST));
         }
 
+        self.repo
+            .remote(REMOTE_NAME, remote)?;
+
         Ok(())
+    }
+
+    fn remove_remote(&self) -> Result<()> {
+        self.repo
+            .remote_delete(REMOTE_NAME)?;
+
+        Ok(())
+    }
+
+    fn change_remote(&self, remote: &str) -> Result<()> {
+        self.remove_remote()?;
+        self.add_remote(remote)
     }
 }
 
@@ -115,8 +149,6 @@ impl GitSyncEngine {
         T: git2::IntoCString,
         I: Iterator<Item = T>
     {
-        let reference = "HEAD";
-
         //
         // Let's stage our changes
         //
@@ -136,8 +168,8 @@ impl GitSyncEngine {
         // Create commit changes and author
         //
 
-        let name = self.config.get_str("name")?;
-        let email = self.config.get_str("email")?;
+        let name = self.config.get_str(CFG_NAME)?;
+        let email = self.config.get_str(CFG_EMAIL)?;
         let signature = git2::Signature::now(name, email)?;
 
         let message = format!("Updates from instance {}", current_instance);
@@ -147,7 +179,7 @@ impl GitSyncEngine {
         //
 
         let head = self.repo
-            .refname_to_id(reference)
+            .refname_to_id(REF_NAME)
             .and_then(|oid| self.repo.find_commit(oid))
             .ok();
 
@@ -156,7 +188,7 @@ impl GitSyncEngine {
             parents.push(head);
         }
 
-        self.repo.commit(Some(reference), &signature, 
+        self.repo.commit(Some(REF_NAME), &signature, 
             &signature, &message, &tree, &parents)?;
 
         Ok(())
@@ -167,12 +199,12 @@ impl GitSyncEngine {
 impl GitSyncEngine {
     fn sync_folder<L: Location>(loc: &L) -> std::path::PathBuf {
         loc.root()
-            .join("sync")
+            .join(SYNC_FORDER)
     }
 
     fn sync_repo_path<L: Location>(loc: &L) -> std::path::PathBuf {
         Self::sync_folder(loc)
-            .join("repository")
+            .join(SYNC_REPO)
     }
 
     fn sync_instance_path(&self, instance: &str) -> std::path::PathBuf {
