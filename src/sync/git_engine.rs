@@ -40,6 +40,14 @@ pub struct GitSyncEngine {
 impl GitSyncEngine {
     pub fn create<L: Location>(loc: &L, remote: Option<&str>) -> Result<Self> {
         //
+        // Check is root location exists and create it if necessary.
+        // Sync folder should be created manually
+        //
+
+        loc.create_if_absent()?;
+        std::fs::create_dir(Self::sync_folder(loc))?;
+
+        //
         // Init or clone repository
         //
 
