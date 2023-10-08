@@ -1,7 +1,8 @@
+use crate::location::Location;
+use crate::error::{Result, Error};
 use super::engine::SyncEngine;
 use super::syncable::{Syncable, Diff};
-use crate::location::Location;
-use crate::error::Result;
+use super::REMOTE_ALREADY_EXIST;
 
 
 /// Synchronization engine that uses git internally.
@@ -54,10 +55,10 @@ impl GitSyncEngine {
 impl SyncEngine for GitSyncEngine {
     fn perform_sync<S: Syncable>(&self, current_instance: &str, syncable: &S) -> Result<()> {
         //
-        // Get all changes from remotes, create diffs and merge remote ones
+        // Get all changes from remote, create diffs and merge remote ones
         //
 
-        self.pull_remotes()?;
+        self.pull_remote()?;
 
         let local_diff = syncable.diff_since(chrono::Utc::now())?;
         let remote_diffs = Vec::new();  // TODO
@@ -76,23 +77,35 @@ impl SyncEngine for GitSyncEngine {
 
         local_diff.write_into(&mut local_diff_file)?;
 
+        //
+        // Now commit new version and push to remote
+        //
+
         self.commit_files([local_diff_path].iter(), current_instance)?;
-        self.push_remotes()
+        self.push_remote()
     }
 
     fn add_remote(&self, _remote: &str) -> Result<()> {
+        let remotes_present = self.repo
+            .remotes()
+            .map(|remotes| !remotes.is_empty())?;
+
+        if remotes_present {
+            return Err(Error::from_message(REMOTE_ALREADY_EXIST));
+        }
+
         Ok(())
     }
 }
 
 
 impl GitSyncEngine {
-    fn pull_remotes(&self) -> Result<()> {
+    fn pull_remote(&self) -> Result<()> {
         // TODO
         Ok(())
     }
 
-    fn push_remotes(&self) -> Result<()> {
+    fn push_remote(&self) -> Result<()> {
         // TODO
         Ok(())
     }
