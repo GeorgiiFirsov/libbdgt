@@ -5,6 +5,10 @@ use super::storage::DataStorage;
 use super::CONSISTENCY_VIOLATION;
 
 
+/// Name of DB file.
+const DB_FILE_NAME: &str = "database";
+
+
 /// Implementation of [`rusqlite::types::ToSql`] trait for [`CategoryType`].
 /// 
 /// [`CategoryType::Income`] translates into 0, [`CategoryType::Outcome`] -- into 1.
@@ -46,15 +50,6 @@ pub struct DbStorage {
 
 
 impl DbStorage {
-    /// Opens an existing database in provided location.
-    /// 
-    /// * `loc` - storage location provider
-    pub fn open<L: Location>(loc: &L) -> Result<Self> {
-        Ok(DbStorage { 
-            db: rusqlite::Connection::open(Self::db_path(loc))?
-        })
-    }
-
     /// Creates a database in provided location.
     /// 
     /// * `loc` - storage location provider
@@ -73,6 +68,15 @@ impl DbStorage {
         storage
             .create_db()
             .and(Ok(storage))
+    }
+
+    /// Opens an existing database in provided location.
+    /// 
+    /// * `loc` - storage location provider
+    pub fn open<L: Location>(loc: &L) -> Result<Self> {
+        Ok(DbStorage { 
+            db: rusqlite::Connection::open(Self::db_path(loc))?
+        })
     }
 }
 
@@ -595,7 +599,7 @@ impl DbStorage {
 
     fn db_path<L: Location>(loc: &L) -> std::path::PathBuf {
         loc.root()
-            .join("database")
+            .join(DB_FILE_NAME)
     }
 
     fn query_with_params<T, P, C>(&self, statement: &str, params: P, convert: C) -> Result<Vec<T>>

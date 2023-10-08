@@ -2,6 +2,10 @@ use crate::error::Result;
 use super::location::Location;
 
 
+/// Root folder for app's data.
+const ROOT_FOLDER: &str = ".bdgt";
+
+
 /// App's location based on current user's home directory.
 pub struct HomeLocation;
 
@@ -18,7 +22,7 @@ impl Location for HomeLocation {
     fn root(&self) -> std::path::PathBuf {
         dirs::home_dir()
             .unwrap()
-            .join(".bdgt")
+            .join(ROOT_FOLDER)
     }
 
     fn exists(&self) -> bool {

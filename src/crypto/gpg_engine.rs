@@ -11,6 +11,13 @@ use super::key::{Key, KeyId, KeyHandle, KeyIdentifier};
 use super::{MISSING_SECRET_KEY, KEY_IS_NOT_SUITABLE, ENCRYPTION_ERROR, DECRYPTION_ERROR, INVALID_ENGINE_STATE};
 
 
+/// Homan-friendly name of GPG engine.
+const ENGINE_NAME: &str = "GnuPG";
+
+/// Name of file with symmetric encryption key.
+const SYMMETRIC_KEY_FILE: &str = "symm";
+
+
 /// Engine-specific key identifier type.
 type NativeId = CString;
 
@@ -140,7 +147,7 @@ impl CryptoEngine for GpgCryptoEngine {
     type KeyId = KeyId<NativeId>;
 
     fn engine(&self) -> &'static str {
-        "GnuPG"
+        ENGINE_NAME
     }
 
     fn version(&self) -> &'static str {
@@ -224,7 +231,7 @@ impl GpgCryptoEngine {
 
     fn symmetric_key_file<L: Location>(loc: &L) -> std::path::PathBuf {
         loc.root()
-            .join("symm")
+            .join(SYMMETRIC_KEY_FILE)
     }
 }
 
