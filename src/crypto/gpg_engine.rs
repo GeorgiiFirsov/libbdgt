@@ -158,15 +158,21 @@ impl CryptoEngine for GpgCryptoEngine {
     
     fn encrypt(&self, key: &Self::Key, plaintext: &[u8]) -> Result<CryptoBuffer> {
         let symmetric_key = self.decrypt_symmetric_key(key)?;
-
-        let cipher = SymmetricCipher::new(symmetric_key.decrypted_buffer.as_bytes())?;
-        cipher.encrypt(plaintext)
+        self.encrypt_symmetric(symmetric_key.decrypted_buffer.as_bytes(), plaintext)
     }
 
     fn decrypt(&self, key: &Self::Key, ciphertext: &[u8]) -> Result<CryptoBuffer> {
         let symmetric_key = self.decrypt_symmetric_key(key)?;
+        self.decrypt_symmetric(symmetric_key.decrypted_buffer.as_bytes(), ciphertext)
+    }
 
-        let cipher = SymmetricCipher::new(symmetric_key.decrypted_buffer.as_bytes())?;
+    fn encrypt_symmetric(&self, key: &[u8], plaintext: &[u8]) -> Result<CryptoBuffer> {
+        let cipher = SymmetricCipher::new(key)?;
+        cipher.encrypt(plaintext)
+    }
+
+    fn decrypt_symmetric(&self, key: &[u8], ciphertext: &[u8]) -> Result<CryptoBuffer> {
+        let cipher = SymmetricCipher::new(key)?;
         cipher.decrypt(ciphertext)
     }
 }

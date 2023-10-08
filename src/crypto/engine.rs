@@ -1,4 +1,5 @@
 use crate::error::Result;
+use super::key::KeyIdentifier;
 use super::buffer::CryptoBuffer;
 
 
@@ -10,7 +11,7 @@ use super::buffer::CryptoBuffer;
 /// different encryption types depending on key type.
 pub trait CryptoEngine {
     /// Key identifier wrapper type, that hides engine-specific stuff behind.
-    type KeyId;
+    type KeyId : KeyIdentifier;
 
     /// Key wrapper type, that hides engine-specific stuff behind.
     type Key;
@@ -30,13 +31,37 @@ pub trait CryptoEngine {
 
     /// Encrypts a BLOB using a provided key.
     /// 
+    /// This method is generic. It is not specified, which encryption 
+    /// algorithm is used. It can be asymmetric, symmetric or hybrid
+    /// encryption.
+    /// 
     /// * `key` - handle to a key.
     /// * `plaintext` - data to encrypt
     fn encrypt(&self, key: &Self::Key, plaintext: &[u8]) -> Result<CryptoBuffer>;
 
     /// Decrypts a BLOB using a provided key.
     /// 
+    /// This method is generic. It is not specified, which encryption 
+    /// algorithm is used. It can be asymmetric, symmetric or hybrid
+    /// encryption.
+    /// 
     /// * `key` - handle to a key.
     /// * `ciphertext` - data to decrypt
     fn decrypt(&self, key: &Self::Key, ciphertext: &[u8]) -> Result<CryptoBuffer>;
+
+    /// Encrypts a BLOB symmetrically using a provided key.
+    /// 
+    /// This method mey be unsupported by some engines.
+    /// 
+    /// * `key` - binary key.
+    /// * `plaintext` - data to encrypt
+    fn encrypt_symmetric(&self, key: &[u8], plaintext: &[u8]) -> Result<CryptoBuffer>;
+
+    /// Decrypts a BLOB symmetrically using a provided key.
+    /// 
+    /// This method mey be unsupported by some engines.
+    /// 
+    /// * `key` - binary key.
+    /// * `ciphertext` - data to decrypt
+    fn decrypt_symmetric(&self, key: &[u8], ciphertext: &[u8]) -> Result<CryptoBuffer>;
 }

@@ -1,6 +1,6 @@
 use std::array::TryFromSliceError;
 
-use crate::crypto::{CryptoEngine, KeyIdentifier, CryptoBuffer};
+use crate::crypto::{CryptoEngine, CryptoBuffer};
 use crate::config::{Config, InstanceId};
 use crate::error::{Result, Error};
 use super::storage::{EncryptedTransaction, EncryptedAccount, EncryptedCategory, EncryptedPlan};
@@ -30,8 +30,7 @@ where
 impl<Ce, St> Budget<Ce, St>
 where
     Ce: CryptoEngine,
-    St: DataStorage,
-    Ce::KeyId: KeyIdentifier
+    St: DataStorage
 {
     /// Creates a budget manager instance.
     /// 
@@ -329,8 +328,7 @@ where
 impl<Ce, St> Budget<Ce, St>
 where
     Ce: CryptoEngine,
-    St: DataStorage,
-    Ce::KeyId: KeyIdentifier
+    St: DataStorage
 {
     fn encrypt_string(&self, data: &String) -> Result<CryptoBuffer> {
         self.crypto_engine
