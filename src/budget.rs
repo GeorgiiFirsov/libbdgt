@@ -192,6 +192,37 @@ where
             .collect() 
     }
 
+    /// Return all transactions with given category sorted by timestamp in
+    /// descending order.
+    /// 
+    /// Used for optimization.
+    /// 
+    /// * `category` - category to return transactions with
+    pub fn transactions_with(&self, category: Id) -> Result<Vec<Transaction>> {
+        let encrypted_transactions = self.storage.transactions_with(category)?;
+        encrypted_transactions
+            .iter()
+            .map(|transaction| self.decrypt_transaction(transaction))
+            .collect() 
+    }
+
+    /// Return all transactions between a given time points (including start 
+    /// of the interval and excluding the end) and with given category 
+    /// sorted by timestamp in descending order.
+    /// 
+    /// Used for optimization.
+    /// 
+    /// * `category` - category to return transactions with
+    /// * `start_timestamp` - point in time to start from
+    /// * `end_timestamp` - point in time to end before
+    pub fn transactions_with_between(&self, category: Id, start_timestamp: Timestamp, end_timestamp: Timestamp) -> Result<Vec<Transaction>> {
+        let encrypted_transactions = self.storage.transactions_with_between(category, start_timestamp, end_timestamp)?;
+        encrypted_transactions
+            .iter()
+            .map(|transaction| self.decrypt_transaction(transaction))
+            .collect() 
+    }
+
     /// Add a new account.
     /// 
     /// * `account` - account data
