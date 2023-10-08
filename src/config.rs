@@ -3,6 +3,13 @@ use crate::location::Location;
 use crate::crypto::{KeyIdentifier, CryptoEngine};
 
 
+///
+const KEY_IDENTIFIER_FILE: &str = "key";
+
+///
+const INSTANCE_IDENTIFIER_FILE: &str = "instance";
+
+
 /// Type of local bdgt instance identifier.
 pub type InstanceId = String;
 
@@ -83,12 +90,12 @@ where
 {
     fn key_file<L: Location>(loc: &L) -> std::path::PathBuf {
         loc.root()
-            .join("key")
+            .join(KEY_IDENTIFIER_FILE)
     }
 
     fn instance_file<L: Location>(loc: &L) -> std::path::PathBuf {
         loc.root()
-            .join("instance")
+            .join(INSTANCE_IDENTIFIER_FILE)
     }
 }
 
