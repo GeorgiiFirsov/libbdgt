@@ -6,7 +6,7 @@ use super::CONSISTENCY_VIOLATION;
 
 
 /// Name of DB file.
-const DB_FILE_NAME: &str = "database";
+const DB_FILE: &str = "database";
 
 
 /// Implementation of [`rusqlite::types::ToSql`] trait for [`CategoryType`].
@@ -599,7 +599,7 @@ impl DbStorage {
 
     fn db_path<L: Location>(loc: &L) -> std::path::PathBuf {
         loc.root()
-            .join(DB_FILE_NAME)
+            .join(DB_FILE)
     }
 
     fn query_with_params<T, P, C>(&self, statement: &str, params: P, convert: C) -> Result<Vec<T>>
