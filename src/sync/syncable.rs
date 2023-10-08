@@ -12,7 +12,7 @@ pub trait Diff {
 
 /// Trait that defines synchronization interface.
 pub trait Syncable {
-    /// Type of diff. It must implement [`Diff].
+    /// Type of diff. It must implement [`Diff`].
     type Diff : Diff;
 
     /// Create diff that represents changes since specified moment of time.
