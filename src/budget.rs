@@ -3,18 +3,59 @@ use std::array::TryFromSliceError;
 use crate::crypto::{CryptoEngine, CryptoBuffer};
 use crate::config::{Config, InstanceId};
 use crate::error::{Result, Error};
+use crate::sync::{Syncable, Diff, SyncEngine};
 use super::storage::{EncryptedTransaction, EncryptedAccount, EncryptedCategory, EncryptedPlan};
 use super::storage::{DataStorage, Id, Timestamp, Transaction, Account, Category, Plan, CategoryType};
 
 
+/// Simple diff representation for some items.
+pub struct SimpleDiff<T> {
+    /// Added items.
+    pub added: Vec<T>,
+
+    /// Changed items.
+    pub changed: Vec<T>,
+
+    /// Removed items.
+    pub removed: Vec<T>,
+}
+
+
+/// Database difference representation.
+pub struct DataDiff {
+    /// Diff for accounts.
+    pub accounts: SimpleDiff<Account>,
+
+    /// Diff for categories.
+    pub categories: SimpleDiff<Category>,
+
+    /// Diff for transactions.
+    pub transactions: SimpleDiff<Transaction>,
+
+    /// Diff for plans.
+    pub plans: SimpleDiff<Plan>,
+}
+
+
+impl Diff for DataDiff {
+    fn write_into<W: std::io::Write>(&self, _writer: &mut W) -> Result<()> {
+        Ok(())
+    }
+}
+
+
 /// Budget manager.
-pub struct Budget<Ce, St>
+pub struct Budget<Ce, Se, St>
 where
     Ce: CryptoEngine,
+    Se: SyncEngine,
     St: DataStorage
 {
     /// Cryptographic engine used to encrypt sensitive data.
     crypto_engine: Ce,
+
+    /// Syncronization engine.
+    sync_engine: Se,
 
     /// Storage used to store the data.
     storage: St,
@@ -27,9 +68,10 @@ where
 }
 
 
-impl<Ce, St> Budget<Ce, St>
+impl<Ce, Se, St> Budget<Ce, Se, St>
 where
     Ce: CryptoEngine,
+    Se: SyncEngine,
     St: DataStorage
 {
     /// Creates a budget manager instance.
@@ -37,12 +79,13 @@ where
     /// * `crypto_engine` - cryptographic engine used to encrypt sensitive data
     /// * `storage` - storage used to store data
     /// * `config` - app's configuration
-    pub fn new(crypto_engine: Ce, storage: St, config: Config<Ce>) -> Result<Self> {
+    pub fn new(crypto_engine: Ce, sync_engine: Se, storage: St, config: Config<Ce>) -> Result<Self> {
         let key = crypto_engine
             .lookup_key(config.key_id())?;
 
         Ok(Budget { 
             crypto_engine: crypto_engine, 
+            sync_engine: sync_engine,
             storage: storage,
             config: config,
             key: key,
@@ -353,12 +396,71 @@ where
     pub fn clean_removed(&self) -> Result<()> {
         self.storage.clean_removed()
     }
+
+    /// Performs syncronization with remote instances.
+    pub fn perform_sync(&self) -> Result<()> {
+        self.sync_engine
+            .perform_sync(self.config.instance_id(), self)?;
+
+        self.clean_removed()
+    }
 }
 
 
-impl<Ce, St> Budget<Ce, St>
+impl<Ce, Se, St> Syncable for Budget<Ce, Se, St> 
 where
     Ce: CryptoEngine,
+    Se: SyncEngine,
+    St: DataStorage
+{
+    type Diff = DataDiff;
+
+    fn diff_since(&self, _base: chrono::DateTime<chrono::Utc>) -> Result<Self::Diff> {
+        // TODO
+
+        let accounts = SimpleDiff {
+            added: Vec::new(),
+            changed: Vec::new(),
+            removed: Vec::new()
+        };
+
+        let categories = SimpleDiff {
+            added: Vec::new(),
+            changed: Vec::new(),
+            removed: Vec::new()
+        };
+
+        let transactions = SimpleDiff {
+            added: Vec::new(),
+            changed: Vec::new(),
+            removed: Vec::new()
+        };
+
+        let plans = SimpleDiff {
+            added: Vec::new(),
+            changed: Vec::new(),
+            removed: Vec::new()
+        };
+
+        Ok(DataDiff { 
+            accounts: accounts, 
+            categories: categories, 
+            transactions: transactions, 
+            plans: plans
+        })
+    }
+
+    fn merge_diffs(&self, _diffs: Vec<Self::Diff>) -> Result<()> {
+        // TODO
+        Ok(())
+    }
+}
+
+
+impl<Ce, Se, St> Budget<Ce, Se, St>
+where
+    Ce: CryptoEngine,
+    Se: SyncEngine,
     St: DataStorage
 {
     fn encrypt_string(&self, data: &String) -> Result<CryptoBuffer> {
