@@ -15,7 +15,7 @@ const REF_NAME: &str = "HEAD";
 const CFG_NAME: &str = "name";
 
 /// Name of configuration parameter that contains an email.
-const  CFG_EMAIL: &str = "email";
+const CFG_EMAIL: &str = "email";
 
 /// Synchronization folder.
 const SYNC_FORDER: &str = "sync";
