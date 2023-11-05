@@ -91,4 +91,5 @@ implement_from_error!(
     aes_gcm::Error,
     std::convert::Infallible,
     git2::Error,
+    scrypt::errors::InvalidOutputLen,
 );

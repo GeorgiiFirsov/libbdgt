@@ -6,6 +6,7 @@ extern crate dirs;
 extern crate uuid;
 extern crate rand;
 extern crate gpgme;
+extern crate scrypt;
 extern crate chrono;
 extern crate typenum;
 extern crate aes_gcm;
