@@ -155,6 +155,10 @@ impl CryptoEngine for GpgCryptoEngine {
             .version()
     }
 
+    fn symmetric_key_length(&self) -> usize {
+        SymmetricCipher::key_size()
+    }
+
     fn lookup_key(&self, id: &Self::KeyId) -> Result<Self::Key> {
         let internal_key = self.ctx
             .borrow_mut()
