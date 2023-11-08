@@ -2,10 +2,10 @@ mod git_engine;
 mod syncable;
 mod engine;
 
-pub use git_engine::GitSyncEngine;
+pub use self::git_engine::GitSyncEngine;
 
-pub(crate) use engine::SyncEngine;
-pub(crate) use syncable::Syncable;
+pub(crate) use self::engine::SyncEngine;
+pub(crate) use self::syncable::Syncable;
 
 
 /// Error message for case of adding of new remote, 
