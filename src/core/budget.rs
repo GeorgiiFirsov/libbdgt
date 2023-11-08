@@ -4,8 +4,8 @@ use crate::crypto::{CryptoEngine, CryptoBuffer};
 use crate::config::{Config, InstanceId};
 use crate::error::{Result, Error};
 use crate::sync::{Syncable, SyncEngine};
-use super::storage::{EncryptedTransaction, EncryptedAccount, EncryptedCategory, EncryptedPlan};
-use super::storage::{DataStorage, Id, Timestamp, Transaction, Account, Category, Plan, CategoryType};
+use crate::storage::{EncryptedTransaction, EncryptedAccount, EncryptedCategory, EncryptedPlan};
+use crate::storage::{DataStorage, Id, Timestamp, Transaction, Account, Category, Plan, CategoryType};
 
 
 /// Simple diff representation for some items.
