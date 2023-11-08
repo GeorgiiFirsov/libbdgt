@@ -1,7 +1,7 @@
 use crate::location::Location;
 use crate::error::{Result, Error};
 use super::engine::SyncEngine;
-use super::syncable::{Syncable, Diff};
+use super::syncable::Syncable;
 use super::REMOTE_ALREADY_EXIST;
 
 
@@ -102,7 +102,7 @@ impl SyncEngine for GitSyncEngine {
             .truncate(true)
             .open(&local_diff_path)?;
 
-        local_diff.write_into(&mut local_diff_file)?;
+        syncable.serialize_diff(local_diff, current_instance, &mut local_diff_file)?;
 
         //
         // Now commit new version and push to remote

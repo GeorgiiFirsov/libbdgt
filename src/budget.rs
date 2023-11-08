@@ -3,7 +3,7 @@ use std::array::TryFromSliceError;
 use crate::crypto::{CryptoEngine, CryptoBuffer};
 use crate::config::{Config, InstanceId};
 use crate::error::{Result, Error};
-use crate::sync::{Syncable, Diff, SyncEngine};
+use crate::sync::{Syncable, SyncEngine};
 use super::storage::{EncryptedTransaction, EncryptedAccount, EncryptedCategory, EncryptedPlan};
 use super::storage::{DataStorage, Id, Timestamp, Transaction, Account, Category, Plan, CategoryType};
 
@@ -34,13 +34,6 @@ pub struct DataDiff {
 
     /// Diff for plans.
     pub plans: SimpleDiff<Plan>,
-}
-
-
-impl Diff for DataDiff {
-    fn write_into<W: std::io::Write>(&self, _writer: &mut W) -> Result<()> {
-        Ok(())
-    }
 }
 
 
@@ -399,8 +392,18 @@ where
 
     /// Performs syncronization with remote instances.
     pub fn perform_sync(&self) -> Result<()> {
+        //
+        // Just use the synchronization engine
+        //
+
         self.sync_engine
             .perform_sync(self.config.instance_id(), self)?;
+
+        //
+        // Some items had been removed since the previous sync,
+        // but they were pushed to remote, and now it is not
+        // necessary to keep them locally
+        //
 
         self.clean_removed()
     }
@@ -453,6 +456,16 @@ where
     fn merge_diffs(&self, _diffs: Vec<Self::Diff>) -> Result<()> {
         // TODO
         Ok(())
+    }
+
+    fn serialize_diff<W: std::io::Write>(&self, _diff: Self::Diff, _instance: &str, _writer: &mut W) -> Result<()> {
+        // TODO
+        Ok(())
+    }
+
+    fn deserialize_diff<R: std::io::Read>(&self, _instance: &str, _reader: &R) -> Result<Self::Diff> {
+        // TODO
+        self.diff_since(chrono::Utc::now())
     }
 }
 

@@ -5,7 +5,7 @@ mod engine;
 pub use git_engine::GitSyncEngine;
 
 pub(crate) use engine::SyncEngine;
-pub(crate) use syncable::{Syncable, Diff};
+pub(crate) use syncable::Syncable;
 
 
 /// Error message for case of adding of new remote, 
