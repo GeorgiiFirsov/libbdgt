@@ -80,7 +80,7 @@ impl GitSyncEngine {
 
 
 impl SyncEngine for GitSyncEngine {
-    fn perform_sync<S: Syncable>(&self, current_instance: &str, syncable: &S) -> Result<()> {
+    fn perform_sync<S: Syncable>(&self, current_instance: &str, syncable: &S, context: &S::Context) -> Result<()> {
         //
         // Get all changes from remote, create diffs and merge remote ones
         //
@@ -102,7 +102,7 @@ impl SyncEngine for GitSyncEngine {
             .truncate(true)
             .open(&local_diff_path)?;
 
-        syncable.serialize_diff(local_diff, current_instance, &mut local_diff_file)?;
+        syncable.serialize_diff(local_diff, current_instance, context, &mut local_diff_file)?;
 
         //
         // Now commit new version and push to remote

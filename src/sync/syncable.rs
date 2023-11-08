@@ -6,6 +6,9 @@ pub trait Syncable {
     /// Type of diff. 
     type Diff;
 
+    /// Type of serialization context.
+    type Context;
+
     /// Create diff that represents changes since specified moment of time.
     /// 
     /// * `base` - moment to get diff since
@@ -20,12 +23,14 @@ pub trait Syncable {
     /// 
     /// * `diff` - diff to serialize
     /// * `instance` - name of instance, that the diff belongs to
+    /// * `context` - user-defined context
     /// * `writer` - writer to store data in
-    fn serialize_diff<W: std::io::Write>(&self, diff: Self::Diff, instance: &str, writer: &mut W) -> Result<()>;
+    fn serialize_diff<W: std::io::Write>(&self, diff: Self::Diff, instance: &str, context: &Self::Context, writer: &mut W) -> Result<()>;
 
     /// Deserializes a diff from a reader.
     /// 
     /// * `instance` - name of instance, that the diff belongs to
+    /// * `context` - user-defined context
     /// * `reader` - reader to get data from
-    fn deserialize_diff<R: std::io::Read>(&self, instance: &str, reader: &R) -> Result<Self::Diff>;
+    fn deserialize_diff<R: std::io::Read>(&self, instance: &str, context: &Self::Context, reader: &R) -> Result<Self::Diff>;
 }

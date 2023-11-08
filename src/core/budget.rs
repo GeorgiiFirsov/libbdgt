@@ -391,13 +391,14 @@ where
     }
 
     /// Performs syncronization with remote instances.
-    pub fn perform_sync(&self) -> Result<()> {
+    pub fn perform_sync(&self, password: &str) -> Result<()> {
         //
         // Just use the synchronization engine
         //
 
+        let context = CryptoBuffer::from(password.as_bytes());
         self.sync_engine
-            .perform_sync(self.config.instance_id(), self)?;
+            .perform_sync(self.config.instance_id(), self, &context)?;
 
         //
         // Some items had been removed since the previous sync,
@@ -417,6 +418,8 @@ where
     St: DataStorage
 {
     type Diff = DataDiff;
+
+    type Context = CryptoBuffer;
 
     fn diff_since(&self, _base: chrono::DateTime<chrono::Utc>) -> Result<Self::Diff> {
         // TODO
@@ -458,12 +461,12 @@ where
         Ok(())
     }
 
-    fn serialize_diff<W: std::io::Write>(&self, _diff: Self::Diff, _instance: &str, _writer: &mut W) -> Result<()> {
+    fn serialize_diff<W: std::io::Write>(&self, _diff: Self::Diff, _instance: &str, _context: &Self::Context, _writer: &mut W) -> Result<()> {
         // TODO
         Ok(())
     }
 
-    fn deserialize_diff<R: std::io::Read>(&self, _instance: &str, _reader: &R) -> Result<Self::Diff> {
+    fn deserialize_diff<R: std::io::Read>(&self, _instance: &str, _context: &Self::Context, _reader: &R) -> Result<Self::Diff> {
         // TODO
         self.diff_since(chrono::Utc::now())
     }

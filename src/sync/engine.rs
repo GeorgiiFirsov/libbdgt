@@ -10,7 +10,7 @@ pub trait SyncEngine {
     /// 
     /// * `current_instance` - name of current app instance
     /// * `syncable` - object to perform syncronization for
-    fn perform_sync<S: Syncable>(&self, current_instance: &str, syncable: &S) -> Result<()>;
+    fn perform_sync<S: Syncable>(&self, current_instance: &str, syncable: &S, context: &S::Context) -> Result<()>;
 
     /// Add a remote. Note, that there can be only one remote. Therefore,
     /// the function fails, if there's already a remote associated.
