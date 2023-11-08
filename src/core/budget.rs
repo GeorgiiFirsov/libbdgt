@@ -390,13 +390,15 @@ where
         self.storage.clean_removed()
     }
 
-    /// Performs syncronization with remote instances.
-    pub fn perform_sync(&self, password: &str) -> Result<()> {
+    /// Performs synchronization with remote instances.
+    /// 
+    /// * `auth` - authentication information for synchronization
+    pub fn perform_sync(&self, auth: &[u8]) -> Result<()> {
         //
         // Just use the synchronization engine
         //
 
-        let context = CryptoBuffer::from(password.as_bytes());
+        let context = CryptoBuffer::from(auth);
         self.sync_engine
             .perform_sync(self.config.instance_id(), self, &context)?;
 
