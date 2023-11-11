@@ -1,6 +1,8 @@
+mod data;
 mod storage;
 mod db_storage;
-mod data;
+mod remote_storage;
+mod remote_db_storage;
 
 pub use self::storage::DataStorage;
 pub use self::db_storage::DbStorage;
