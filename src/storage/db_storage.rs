@@ -2,7 +2,7 @@ use crate::error::{Result, Error};
 use crate::location::Location;
 use super::data::{EncryptedTransaction, EncryptedCategory, EncryptedAccount, EncryptedPlan, Id, Timestamp, CategoryType};
 use super::storage::DataStorage;
-use super::CONSISTENCY_VIOLATION;
+use super::{CONSISTENCY_VIOLATION, CANNOT_DELETE_PREDEFINED, CANNOT_MODIFY_PREDEFINED};
 
 
 /// Name of DB file.
@@ -82,6 +82,10 @@ impl DbStorage {
 
 
 impl DataStorage for DbStorage {
+    const TRANSFER_INCOME_ID: Id = 1;
+
+    const TRANSFER_OUTCOME_ID: Id = 2;
+
     fn add_transaction(&self, transaction: EncryptedTransaction) -> Result<Id> {
         let statement_fmt = r#"
             INSERT INTO transactions (timestamp, description, account_id, category_id, amount, _change_timestamp)
@@ -332,6 +336,10 @@ impl DataStorage for DbStorage {
     }
 
     fn update_category(&self, category: EncryptedCategory) -> Result<()> {
+        if Self::is_predefined_category(category.id.unwrap()) {
+            return Err(Error::from_message(CANNOT_MODIFY_PREDEFINED));
+        }
+
         let statement_fmt = r#"
             UPDATE categories
                SET name = ?1,
@@ -350,6 +358,10 @@ impl DataStorage for DbStorage {
         //
         // Check if no transactions and plans reference this category
         //
+
+        if Self::is_predefined_category(category) {
+            return Err(Error::from_message(CANNOT_DELETE_PREDEFINED));
+        }
 
         self.ensure_consistency("transactions", "category_id", category)?;
         self.ensure_consistency("plans", "category_id", category)?;
@@ -526,7 +538,7 @@ impl DbStorage {
                 account_id          INTEGER     PRIMARY KEY AUTOINCREMENT,
                 balance             BYTEA       NOT NULL,
                 name                BYTEA       NOT NULL,
-                _change_timestamp   DATETIME    NOT NULL,
+                _change_timestamp   DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 _removal_timestamp  DATETIME    NULL
             );
 
@@ -540,7 +552,7 @@ impl DbStorage {
                 category_id         INTEGER     PRIMARY KEY AUTOINCREMENT,
                 name                BYTEA       NOT NULL,
                 type                TINYINT     NOT NULL,
-                _change_timestamp   DATETIME    NOT NULL,
+                _change_timestamp   DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 _removal_timestamp  DATETIME    NULL
             );
 
@@ -560,7 +572,7 @@ impl DbStorage {
                 account_id          INTEGER     REFERENCES accounts(account_id),
                 category_id         INTEGER     REFERENCES categories(category_id),
                 amount              BYTEA       NOT NULL,
-                _change_timestamp   DATETIME    NOT NULL,
+                _change_timestamp   DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 _removal_timestamp  DATETIME    NULL
             );
 
@@ -578,7 +590,7 @@ impl DbStorage {
                 category_id         INTEGER     REFERENCES categories(category_id),
                 name                BYTEA       NOT NULL,
                 amount_limit        BYTEA       NOT NULL,
-                _change_timestamp   DATETIME    NOT NULL,
+                _change_timestamp   DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 _removal_timestamp  DATETIME    NULL
             );
 
@@ -653,6 +665,15 @@ impl DbStorage {
 
     fn current_datetime() -> Timestamp {
         chrono::Utc::now()
+    }
+
+    fn is_predefined_category(category: Id) -> bool {
+        let predefined = [
+            Self::TRANSFER_INCOME_ID,
+            Self::TRANSFER_OUTCOME_ID
+        ];
+
+        predefined.contains(&category)
     }
 }
 

@@ -3,8 +3,22 @@ use std::array::TryFromSliceError;
 use crate::crypto::{CryptoEngine, CryptoBuffer};
 use crate::config::{Config, InstanceId};
 use crate::error::{Result, Error};
-use super::storage::{EncryptedTransaction, EncryptedAccount, EncryptedCategory, EncryptedPlan};
-use super::storage::{DataStorage, Id, Timestamp, Transaction, Account, Category, Plan, CategoryType};
+use crate::storage::{EncryptedTransaction, EncryptedAccount, EncryptedCategory, EncryptedPlan};
+use crate::storage::{DataStorage, Id, Timestamp, Transaction, Account, Category, Plan, CategoryType};
+use super::WRONG_PREDEFINED_IDENTIFIER;
+
+
+/// Name of income transfer category.
+const TRANSFER_INCOME_CAT_NAME: &str = "Transfer (income)";
+
+/// Name of income transfer transaction.
+const TRANSFER_INCOME_DESCRIPTION: &str = "--> Transfer (income)";
+
+/// Name of outcome transfer category.
+const TRANSFER_OUTCOME_CAT_NAME: &str = "Transfer (outcome)";
+
+/// Name of outcome transfer transaction.
+const TRANSFER_OUTCOME_DESCRIPTION: &str = "Transfer (outcome) -->";
 
 
 /// Budget manager.
@@ -73,6 +87,35 @@ where
             .instance_id()
     }
 
+    /// Initializes budget instance for the first time.
+    pub fn initialize(&self) -> Result<()> {
+        //
+        // Add predefined items and ensure, that they have proper identifiers
+        //
+
+        let id = self.add_category(Category { 
+            id: None, 
+            name: TRANSFER_INCOME_CAT_NAME.to_owned(), 
+            category_type: CategoryType::Income 
+        })?;
+
+        if id != St::TRANSFER_INCOME_ID {
+            return Err(Error::from_message(WRONG_PREDEFINED_IDENTIFIER));
+        }
+
+        let id = self.add_category(Category { 
+            id: None, 
+            name: TRANSFER_OUTCOME_CAT_NAME.to_owned(),
+            category_type: CategoryType::Outcome
+        })?;
+
+        if id != St::TRANSFER_OUTCOME_ID {
+            return Err(Error::from_message(WRONG_PREDEFINED_IDENTIFIER));
+        }
+
+        Ok(())
+    }
+
     /// Add a new transaction.
     /// 
     /// * `transaction` - transaction data
@@ -101,6 +144,36 @@ where
         self.storage.update_account(self.encrypt_account(&decrypted_account)?)?;
 
         Ok(id)
+    }
+
+    /// Add transfer transactions.
+    /// 
+    /// * `amount` - amount of money to transfer between accounts
+    /// * `from_account` - account to transfer from
+    /// * `to_account` - account to transfer to
+    pub fn add_transfer(&self, amount: isize, from_account: Id, to_account: Id) -> Result<()> {
+        let amount = amount.abs();
+        let timestamp = chrono::Utc::now();
+
+        self.add_transaction(Transaction{
+            id: None,
+            timestamp: timestamp.clone(),
+            description: TRANSFER_INCOME_DESCRIPTION.to_owned(),
+            account_id: to_account,
+            category_id: St::TRANSFER_INCOME_ID,
+            amount: amount
+        })?;
+
+        self.add_transaction(Transaction{
+            id: None,
+            timestamp: timestamp,
+            description: TRANSFER_OUTCOME_DESCRIPTION.to_owned(),
+            account_id: from_account,
+            category_id: St::TRANSFER_OUTCOME_ID,
+            amount: -amount
+        })?;
+
+        Ok(())
     }
 
     /// Remove transaction.

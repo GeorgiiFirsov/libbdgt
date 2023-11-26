@@ -18,6 +18,6 @@ extern crate rusqlite;
 pub mod location;
 pub mod storage;
 pub mod crypto;
-pub mod budget;
 pub mod config;
 pub mod error;
+pub mod core;

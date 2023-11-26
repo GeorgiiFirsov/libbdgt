@@ -4,6 +4,12 @@ use super::data::{EncryptedTransaction, EncryptedCategory, EncryptedAccount, Enc
 
 /// Storage trait, that provides protected data reading and writing.
 pub trait DataStorage {
+    /// Predefined income transfer category identifier.
+    const TRANSFER_INCOME_ID: Id;
+
+    ///Predefined outcome transfer category identifier.
+    const TRANSFER_OUTCOME_ID: Id;
+
     /// Add a new transaction.
     /// 
     /// * `transaction` - protected transaction data
