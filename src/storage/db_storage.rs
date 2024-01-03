@@ -82,21 +82,33 @@ impl DbStorage {
 
 
 impl DataStorage for DbStorage {
-    const TRANSFER_INCOME_ID: Id = 1;
+    const TRANSFER_INCOME_ID: Id = [0x00; 16];
 
-    const TRANSFER_OUTCOME_ID: Id = 2;
+    const TRANSFER_OUTCOME_ID: Id = [0xFF; 16];
 
-    fn add_transaction(&self, transaction: EncryptedTransaction) -> Result<Id> {
-        let statement_fmt = r#"
-            INSERT INTO transactions (timestamp, description, account_id, category_id, amount, _change_timestamp)
-            VALUES (?1, ?2, ?3, ?4, ?5, ?6)
-        "#;
+    fn add_transaction(&self, transaction: EncryptedTransaction) -> Result<()> {
+        let statement_fmt = match transaction.id {
+            None => r#"
+                INSERT INTO transactions (timestamp, description, account_id, category_id, amount, _change_timestamp)
+                VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+            "#,
+            Some(_) => r#"
+                INSERT INTO transactions (transaction_id, timestamp, description, account_id, category_id, amount, _change_timestamp)
+                VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+            "#
+        };
         
-        self.db
-            .execute(statement_fmt, rusqlite::params![transaction.timestamp, transaction.description, 
-                transaction.account_id, transaction.category_id, transaction.amount, Self::current_datetime()])?;
+        match transaction.id {
+            None => self.db.execute(statement_fmt, 
+                rusqlite::params![transaction.timestamp, transaction.description, transaction.account_id, 
+                    transaction.category_id, transaction.amount, Self::current_datetime()])?,
+                
+            Some(id) => self.db.execute(statement_fmt, 
+                rusqlite::params![id, transaction.timestamp, transaction.description, transaction.account_id, 
+                    transaction.category_id, transaction.amount, Self::current_datetime()])?
+        };
 
-        Ok(self.last_inserted_id())
+        Ok(())
     }
 
     fn remove_transaction(&self, transaction: Id) -> Result<()> {
@@ -234,16 +246,27 @@ impl DataStorage for DbStorage {
         self.query_with_params(statement_fmt, rusqlite::params![category, start_timestamp, end_timestamp], Self::transaction_from_row)
     }
 
-    fn add_account(&self, account: EncryptedAccount) -> Result<Id> {
-        let statement_fmt = r#"
-            INSERT INTO accounts (name, balance, _change_timestamp)
-            VALUES (?1, ?2, ?3)
-        "#;
+    fn add_account(&self, account: EncryptedAccount) -> Result<()> {
+        let statement_fmt = match account.id {
+            None => r#"
+                INSERT INTO accounts (name, balance, _change_timestamp)
+                VALUES (?1, ?2, ?3)
+            "#,
+            Some(_) => r#"
+                INSERT INTO accounts (account_id, name, balance, _change_timestamp)
+                VALUES (?1, ?2, ?3, ?4)
+            "#
+        };
 
-        self.db
-            .execute(statement_fmt, rusqlite::params![account.name, account.balance, Self::current_datetime()])?;
+        match account.id {
+            None => self.db.execute(statement_fmt, 
+                rusqlite::params![account.name, account.balance, Self::current_datetime()])?,
 
-        Ok(self.last_inserted_id())
+            Some(id) => self.db.execute(statement_fmt,
+                rusqlite::params![id, account.name, account.balance, Self::current_datetime()])?
+        };
+
+        Ok(())
     }
 
     fn update_account(&self, account: EncryptedAccount) -> Result<()> {
@@ -323,16 +346,28 @@ impl DataStorage for DbStorage {
         self.query(statement, Self::account_from_row)
     }
 
-    fn add_category(&self, category: EncryptedCategory) -> Result<Id> {
-        let statement_fmt = r#"
-            INSERT INTO categories (name, type, _change_timestamp)
-            VALUES (?1, ?2, ?3)
-        "#;
+    fn add_category(&self, category: EncryptedCategory) -> Result<()> {
+        let statement_fmt = match category.id {
+            None => r#"
+                    INSERT INTO categories (name, type, _change_timestamp)
+                    VALUES (?1, ?2, ?3)
+                "#,
 
-        self.db
-            .execute(statement_fmt, rusqlite::params![category.name, category.category_type, Self::current_datetime()])?;
+            Some(_) => r#"
+                    INSERT INTO categories (category_id, name, type, _change_timestamp)
+                    VALUES (?1, ?2, ?3, ?4)
+                "#
+        };
 
-        Ok(self.last_inserted_id())
+        match category.id {
+            None => self.db.execute(statement_fmt, 
+                rusqlite::params![category.name, category.category_type, Self::current_datetime()])?,
+
+            Some(id) => self.db.execute(statement_fmt, 
+                rusqlite::params![id, category.name, category.category_type, Self::current_datetime()])?
+        };
+
+        Ok(())
     }
 
     fn update_category(&self, category: EncryptedCategory) -> Result<()> {
@@ -416,16 +451,27 @@ impl DataStorage for DbStorage {
         self.query_with_params(statement_fmt, rusqlite::params![category_type], Self::category_from_row)
     }
 
-    fn add_plan(&self, plan: EncryptedPlan) -> Result<Id> {
-        let statement_fmt = r#"
-            INSERT INTO plans (category_id, name, amount_limit, _change_timestamp)
-            VALUES (?1, ?2, ?3, ?4)
-        "#;
+    fn add_plan(&self, plan: EncryptedPlan) -> Result<()> {
+        let statement_fmt = match plan.id {
+            None => r#"
+                INSERT INTO plans (category_id, name, amount_limit, _change_timestamp)
+                VALUES (?1, ?2, ?3, ?4)
+            "#,
+            Some(_) => r#"
+                INSERT INTO plans (plan_id, category_id, name, amount_limit, _change_timestamp)
+                VALUES (?1, ?2, ?3, ?4, ?5)
+            "#
+        };
 
-        self.db
-            .execute(statement_fmt, rusqlite::params![plan.category_id, plan.name, plan.amount_limit, Self::current_datetime()])?;
+        match plan.id {
+            None => self.db.execute(statement_fmt, 
+                rusqlite::params![plan.category_id, plan.name, plan.amount_limit, Self::current_datetime()])?,
 
-        Ok(self.last_inserted_id())
+            Some(id) => self.db.execute(statement_fmt,
+                rusqlite::params![id, plan.category_id, plan.name, plan.amount_limit, Self::current_datetime()])?
+        };
+
+        Ok(())
     }
 
     fn update_plan(&self, plan: EncryptedPlan) -> Result<()> {
@@ -535,12 +581,12 @@ impl DbStorage {
 
         let create_statement = r#"
             CREATE TABLE accounts (
-                account_id          INTEGER     PRIMARY KEY AUTOINCREMENT,
+                account_id          BLOB        PRIMARY KEY DEFAULT (randomblob(16)),
                 balance             BYTEA       NOT NULL,
                 name                BYTEA       NOT NULL,
                 _change_timestamp   DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 _removal_timestamp  DATETIME    NULL
-            );
+            ) WITHOUT ROWID;
 
             CREATE INDEX accounts_by_change_timestamp
                 ON accounts (_change_timestamp);
@@ -549,12 +595,12 @@ impl DbStorage {
                 ON accounts (_removal_timestamp);
                 
             CREATE TABLE categories (
-                category_id         INTEGER     PRIMARY KEY AUTOINCREMENT,
+                category_id         BLOB        PRIMARY KEY DEFAULT (randomblob(16)),
                 name                BYTEA       NOT NULL,
                 type                TINYINT     NOT NULL,
                 _change_timestamp   DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 _removal_timestamp  DATETIME    NULL
-            );
+            ) WITHOUT ROWID;
 
             CREATE INDEX categories_by_type
                 ON categories (type);
@@ -566,15 +612,15 @@ impl DbStorage {
                 ON categories (_removal_timestamp);
                 
             CREATE TABLE transactions (
-                transaction_id      INTEGER     PRIMARY KEY AUTOINCREMENT,
+                transaction_id      BLOB        PRIMARY KEY DEFAULT (randomblob(16)),
                 timestamp           DATETIME    NOT NULL,
                 description         BYTEA       NOT NULL,    
-                account_id          INTEGER     REFERENCES accounts(account_id),
-                category_id         INTEGER     REFERENCES categories(category_id),
+                account_id          BLOB        REFERENCES accounts(account_id),
+                category_id         BLOB        REFERENCES categories(category_id),
                 amount              BYTEA       NOT NULL,
                 _change_timestamp   DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 _removal_timestamp  DATETIME    NULL
-            );
+            ) WITHOUT ROWID;
 
             CREATE INDEX transactions_by_timestamp
                 ON transactions (timestamp);
@@ -586,13 +632,13 @@ impl DbStorage {
                 ON transactions (_removal_timestamp);
 
             CREATE TABLE plans (
-                plan_id             INTEGER     PRIMARY KEY AUTOINCREMENT,
-                category_id         INTEGER     REFERENCES categories(category_id),
+                plan_id             BLOB        PRIMARY KEY DEFAULT (randomblob(16)),
+                category_id         BLOB        REFERENCES categories(category_id),
                 name                BYTEA       NOT NULL,
                 amount_limit        BYTEA       NOT NULL,
                 _change_timestamp   DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 _removal_timestamp  DATETIME    NULL
-            );
+            ) WITHOUT ROWID;
 
             CREATE INDEX plans_by_category
                 ON plans (category_id);
@@ -654,13 +700,6 @@ impl DbStorage {
         }
 
         Ok(())
-    }
-
-    fn last_inserted_id(&self) -> Id {
-        let id = self.db
-            .last_insert_rowid();
-
-        id as Id
     }
 
     fn current_datetime() -> Timestamp {

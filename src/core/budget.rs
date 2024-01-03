@@ -6,7 +6,6 @@ use crate::error::{Result, Error};
 use crate::sync::{Syncable, SyncEngine};
 use crate::storage::{EncryptedTransaction, EncryptedAccount, EncryptedCategory, EncryptedPlan};
 use crate::storage::{DataStorage, Id, Timestamp, Transaction, Account, Category, Plan, CategoryType};
-use super::WRONG_PREDEFINED_IDENTIFIER;
 
 
 /// Name of income transfer category.
@@ -129,33 +128,23 @@ where
         // Add predefined items and ensure, that they have proper identifiers
         //
 
-        let id = self.add_category(Category { 
-            id: None, 
+        self.add_category(Category { 
+            id: Some(St::TRANSFER_INCOME_ID), 
             name: TRANSFER_INCOME_CAT_NAME.to_owned(), 
             category_type: CategoryType::Income 
         })?;
 
-        if id != St::TRANSFER_INCOME_ID {
-            return Err(Error::from_message(WRONG_PREDEFINED_IDENTIFIER));
-        }
-
-        let id = self.add_category(Category { 
-            id: None, 
+        self.add_category(Category { 
+            id: Some(St::TRANSFER_OUTCOME_ID), 
             name: TRANSFER_OUTCOME_CAT_NAME.to_owned(),
             category_type: CategoryType::Outcome
-        })?;
-
-        if id != St::TRANSFER_OUTCOME_ID {
-            return Err(Error::from_message(WRONG_PREDEFINED_IDENTIFIER));
-        }
-
-        Ok(())
+        })
     }
 
     /// Add a new transaction.
     /// 
     /// * `transaction` - transaction data
-    pub fn add_transaction(&self, transaction: Transaction) -> Result<Id> {
+    pub fn add_transaction(&self, transaction: Transaction) -> Result<()> {
         //
         // Amount is considered to have a proper sign,
         // so I just add it to a corresponding account's
@@ -176,10 +165,10 @@ where
         // Hence there is a way to restore consistency.
         //
 
-        let id = self.storage.add_transaction(self.encrypt_transaction(&transaction)?)?;
+        self.storage.add_transaction(self.encrypt_transaction(&transaction)?)?;
         self.storage.update_account(self.encrypt_account(&decrypted_account)?)?;
 
-        Ok(id)
+        Ok(())
     }
 
     /// Add transfer transactions.
@@ -335,7 +324,7 @@ where
     /// Add a new account.
     /// 
     /// * `account` - account data
-    pub fn add_account(&self, account: Account) -> Result<Id> {
+    pub fn add_account(&self, account: Account) -> Result<()> {
         self.storage.add_account(self.encrypt_account(&account)?)
     }
 
@@ -369,7 +358,7 @@ where
     /// Add a new category.
     /// 
     /// * `category` - category data
-    pub fn add_category(&self, category: Category) -> Result<Id> {
+    pub fn add_category(&self, category: Category) -> Result<()> {
         self.storage.add_category(self.encrypt_category(&category)?)
     }
 
@@ -415,7 +404,7 @@ where
     /// Add a new plan.
     /// 
     /// * `plan` - plan data
-    pub fn add_plan(&self, plan: Plan) -> Result<Id> {
+    pub fn add_plan(&self, plan: Plan) -> Result<()> {
         self.storage.add_plan(self.encrypt_plan(&plan)?)
     }
 

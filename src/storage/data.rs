@@ -1,5 +1,5 @@
 /// Identifier type.
-pub type Id = usize;
+pub type Id = [u8; 16];
 
 
 /// Identifier for primary keys in structure.
