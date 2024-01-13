@@ -23,6 +23,15 @@ const SYNC_FORDER: &str = "sync";
 /// Repository folder.
 const SYNC_REPO: &str = "repository";
 
+/// File with last synchronization timestamp.
+const TIMESTAMP_FILE: &str = "timestamp";
+
+/// File with last synchronized instance timestamp.
+const LAST_INSTANCE_FILE: &str = "instance";
+
+/// File with full changelog.
+const CHANGELOG_FILE: &str = "changelog";
+
 
 /// Synchronization engine that uses git internally.
 pub struct GitSyncEngine {
@@ -82,42 +91,49 @@ impl GitSyncEngine {
 impl SyncEngine for GitSyncEngine {
     fn perform_sync<S: Syncable>(&self, current_instance: &str, syncable: &S, context: &S::Context) -> Result<()> {
         //
-        // Get all changes from remote, create diffs and merge remote ones
+        // Get all changes from remote and open raw files
         //
 
         self.pull_remote()?;
 
-        let local_diff = syncable.diff_since(chrono::Utc::now())?;
-        let remote_diffs = Vec::new();  // TODO
-
-        syncable.merge_diffs(remote_diffs)?;
-
-        //
-        // Create file and serialize diff into it
-        //
-
-        let local_diff_path = self.sync_instance_path(current_instance);
-        let mut local_diff_file = std::fs::OpenOptions::new()
+        let mut timestamp_file = std::fs::OpenOptions::new()
+            .read(true)
             .write(true)
-            .truncate(true)
-            .open(&local_diff_path)?;
+            .create(true)
+            .open(self.syncable_file_path(TIMESTAMP_FILE))?;
 
-        syncable.serialize_diff(local_diff, current_instance, context, &mut local_diff_file)?;
+        let mut last_instance_file = std::fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create(true)
+            .open(self.syncable_file_path(LAST_INSTANCE_FILE))?;
+
+        let mut changelog_file = std::fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create(true)
+            .append(true)
+            .open(self.syncable_file_path(CHANGELOG_FILE))?;
 
         //
-        // Now commit new version and push to remote
+        // Perform actual synchronization
         //
 
-        self.commit_files([local_diff_path].iter(), current_instance)?;
+        syncable.merge_and_export_changes(&mut timestamp_file, 
+            &mut last_instance_file, &mut changelog_file, context)?;
+
+        //
+        // Now commit new versions of files and push to remote
+        //
+
+        self.commit_files([TIMESTAMP_FILE, LAST_INSTANCE_FILE, CHANGELOG_FILE].iter(), 
+            &format!("Updates from {}", current_instance))?;
+
         self.push_remote()
     }
 
     fn add_remote(&self, remote: &str) -> Result<()> {
-        let remotes_present = self.repo
-            .remotes()
-            .map(|remotes| !remotes.is_empty())?;
-
-        if remotes_present {
+        if let Ok(_) = self.repo.find_remote(REMOTE_NAME) {
             return Err(Error::from_message(REMOTE_ALREADY_EXIST));
         }
 
@@ -152,7 +168,7 @@ impl GitSyncEngine {
         Ok(())
     }
 
-    fn commit_files<T, I>(&self, pathspecs: I, current_instance: &str) -> Result<()> 
+    fn commit_files<T, I>(&self, pathspecs: I, message: &str) -> Result<()> 
     where
         T: git2::IntoCString,
         I: Iterator<Item = T>
@@ -179,8 +195,6 @@ impl GitSyncEngine {
         let name = self.config.get_str(CFG_NAME)?;
         let email = self.config.get_str(CFG_EMAIL)?;
         let signature = git2::Signature::now(name, email)?;
-
-        let message = format!("Updates from instance {}", current_instance);
 
         //
         // Now let's find out parent commit and perform commit
@@ -215,8 +229,8 @@ impl GitSyncEngine {
             .join(SYNC_REPO)
     }
 
-    fn sync_instance_path(&self, instance: &str) -> std::path::PathBuf {
+    fn syncable_file_path(&self, file: &str) -> std::path::PathBuf {
         self.repo_path
-            .join(instance)
+            .join(file)
     }
 }

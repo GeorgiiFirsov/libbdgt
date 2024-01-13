@@ -21,8 +21,8 @@ const TRANSFER_OUTCOME_CAT_NAME: &str = "Transfer (outcome)";
 const TRANSFER_OUTCOME_DESCRIPTION: &str = "Transfer (outcome) -->";
 
 
-/// Simple diff representation for some items.
-pub struct SimpleDiff<T> {
+/// Simple changelog representation for some items.
+pub struct SimpleChangelog<T> {
     /// Added items.
     pub added: Vec<T>,
 
@@ -34,19 +34,19 @@ pub struct SimpleDiff<T> {
 }
 
 
-/// Database difference representation.
-pub struct DataDiff {
+/// Database changelog representation.
+pub struct Changelog {
     /// Diff for accounts.
-    pub accounts: SimpleDiff<Account>,
+    pub accounts: SimpleChangelog<Account>,
 
     /// Diff for categories.
-    pub categories: SimpleDiff<Category>,
+    pub categories: SimpleChangelog<Category>,
 
     /// Diff for transactions.
-    pub transactions: SimpleDiff<Transaction>,
+    pub transactions: SimpleChangelog<Transaction>,
 
     /// Diff for plans.
-    pub plans: SimpleDiff<Plan>,
+    pub plans: SimpleChangelog<Plan>,
 }
 
 
@@ -481,58 +481,16 @@ where
     Se: SyncEngine,
     St: DataStorage
 {
-    type Diff = DataDiff;
-
     type Context = CryptoBuffer;
 
-    fn diff_since(&self, _base: chrono::DateTime<chrono::Utc>) -> Result<Self::Diff> {
-        // TODO
-
-        let accounts = SimpleDiff {
-            added: Vec::new(),
-            changed: Vec::new(),
-            removed: Vec::new()
-        };
-
-        let categories = SimpleDiff {
-            added: Vec::new(),
-            changed: Vec::new(),
-            removed: Vec::new()
-        };
-
-        let transactions = SimpleDiff {
-            added: Vec::new(),
-            changed: Vec::new(),
-            removed: Vec::new()
-        };
-
-        let plans = SimpleDiff {
-            added: Vec::new(),
-            changed: Vec::new(),
-            removed: Vec::new()
-        };
-
-        Ok(DataDiff { 
-            accounts: accounts, 
-            categories: categories, 
-            transactions: transactions, 
-            plans: plans
-        })
-    }
-
-    fn merge_diffs(&self, _diffs: Vec<Self::Diff>) -> Result<()> {
+    fn merge_and_export_changes<Ts, Li, Cl>(&self, _timestamp: &mut Ts, _last_instance: &mut Li, _changelog: &mut Cl, _context: &Self::Context) -> Result<()>
+    where
+        Ts: std::io::Read + std::io::Write,
+        Li: std::io::Read + std::io::Write,
+        Cl: std::io::Read + std::io::Write 
+    {
         // TODO
         Ok(())
-    }
-
-    fn serialize_diff<W: std::io::Write>(&self, _diff: Self::Diff, _instance: &str, _context: &Self::Context, _writer: &mut W) -> Result<()> {
-        // TODO
-        Ok(())
-    }
-
-    fn deserialize_diff<R: std::io::Read>(&self, _instance: &str, _context: &Self::Context, _reader: &R) -> Result<Self::Diff> {
-        // TODO
-        self.diff_since(chrono::Utc::now())
     }
 }
 
