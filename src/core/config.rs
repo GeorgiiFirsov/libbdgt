@@ -3,10 +3,10 @@ use crate::location::Location;
 use crate::crypto::{KeyIdentifier, CryptoEngine};
 
 
-///
+/// File with key identifier name.
 const KEY_IDENTIFIER_FILE: &str = "key";
 
-///
+/// File with instance identifier name.
 const INSTANCE_IDENTIFIER_FILE: &str = "instance";
 
 

@@ -1,11 +1,11 @@
 use std::array::TryFromSliceError;
 
 use crate::crypto::{CryptoEngine, CryptoBuffer};
-use crate::config::{Config, InstanceId};
 use crate::error::{Result, Error};
 use crate::sync::{Syncable, SyncEngine};
 use crate::storage::{EncryptedTransaction, EncryptedAccount, EncryptedCategory, EncryptedPlan};
 use crate::storage::{DataStorage, Id, Timestamp, Transaction, Account, Category, Plan, CategoryType};
+use super::config::{Config, InstanceId};
 
 
 /// Name of income transfer category.
