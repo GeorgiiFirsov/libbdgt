@@ -7,6 +7,7 @@ use crate::sync::{Syncable, SyncEngine};
 use crate::storage::{EncryptedTransaction, EncryptedAccount, EncryptedCategory, EncryptedPlan};
 use crate::storage::{DataStorage, Id, Timestamp, Transaction, Account, Category, Plan, CategoryType};
 use super::config::{Config, InstanceId};
+use super::changelog::{Changelog, SimpleChangelog};
 
 
 /// Name of income transfer category.
@@ -20,35 +21,6 @@ const TRANSFER_OUTCOME_CAT_NAME: &str = "Transfer (outcome)";
 
 /// Name of outcome transfer transaction.
 const TRANSFER_OUTCOME_DESCRIPTION: &str = "Transfer (outcome) -->";
-
-
-/// Simple changelog representation for some items.
-pub struct SimpleChangelog<T> {
-    /// Added items.
-    pub added: Vec<T>,
-
-    /// Changed items.
-    pub changed: Vec<T>,
-
-    /// Removed items.
-    pub removed: Vec<T>,
-}
-
-
-/// Database changelog representation.
-pub struct Changelog {
-    /// Diff for accounts.
-    pub accounts: SimpleChangelog<Account>,
-
-    /// Diff for categories.
-    pub categories: SimpleChangelog<Category>,
-
-    /// Diff for transactions.
-    pub transactions: SimpleChangelog<Transaction>,
-
-    /// Diff for plans.
-    pub plans: SimpleChangelog<Plan>,
-}
 
 
 /// Budget manager.
