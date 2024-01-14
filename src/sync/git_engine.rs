@@ -11,6 +11,9 @@ const REMOTE_NAME: &str = "origin";
 /// Name of reference to update on commit.
 const REF_NAME: &str = "HEAD";
 
+/// Branch name.
+const BRANCH_NAME: &str = "main";
+
 /// Name of configuration parameter that contains a username.
 const CFG_NAME: &str = "name";
 
@@ -126,10 +129,10 @@ impl SyncEngine for GitSyncEngine {
         // Now commit new versions of files and push to remote
         //
 
-        self.commit_files([TIMESTAMP_FILE, LAST_INSTANCE_FILE, CHANGELOG_FILE].iter(), 
+        let branch_ref = self.commit_files([TIMESTAMP_FILE, LAST_INSTANCE_FILE, CHANGELOG_FILE].iter(), 
             &format!("Updates from {}", current_instance))?;
 
-        self.push_remote()
+        self.push_remote(&branch_ref)
     }
 
     fn add_remote(&self, remote: &str) -> Result<()> {
@@ -163,12 +166,13 @@ impl GitSyncEngine {
         Ok(())
     }
 
-    fn push_remote(&self) -> Result<()> {
-        // TODO
-        Ok(())
+    fn push_remote(&self, branch_ref: &str) -> Result<()> {
+        self.repo.find_remote(REMOTE_NAME)
+            .and_then(|mut remote| remote.push(&[branch_ref], None))
+            .map_err(Error::from)
     }
 
-    fn commit_files<T, I>(&self, pathspecs: I, message: &str) -> Result<()> 
+    fn commit_files<T, I>(&self, pathspecs: I, message: &str) -> Result<String> 
     where
         T: git2::IntoCString,
         I: Iterator<Item = T>
@@ -210,10 +214,22 @@ impl GitSyncEngine {
             parents.push(head);
         }
 
-        self.repo.commit(Some(REF_NAME), &signature, 
+        let commit = self.repo.commit(Some(REF_NAME), &signature, 
             &signature, &message, &tree, &parents)?;
 
-        Ok(())
+        //
+        // Update branch pointer
+        //
+
+        let commit = self.repo.find_commit(commit)?;
+        let branch = self.repo.branch(BRANCH_NAME, &commit, true)
+            .map(|b| b.into_reference())?;
+
+        let branch_ref = branch.name()
+            .expect("Branch MUST have name")
+            .to_owned();
+
+        Ok(branch_ref)
     }
 }
 
