@@ -541,9 +541,11 @@ where
 {
     fn read_timestamp<R: std::io::Read>(timestamp_reader: &mut R) -> Result<Timestamp> {
         let mut buffer = [0; std::mem::size_of::<i64>()];
-        timestamp_reader.read_exact(&mut buffer)?;
+        let seconds = match timestamp_reader.read_exact(&mut buffer) {
+            Ok(_) => i64::from_le_bytes(buffer),
+            _ => 0i64
+        };
 
-        let seconds = i64::from_le_bytes(buffer);
         let result = Timestamp::from_timestamp(seconds, 0)
             .expect("Check timestamp in repository for validity");
 
