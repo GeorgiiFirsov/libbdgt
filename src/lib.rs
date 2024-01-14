@@ -3,6 +3,7 @@
 //! `libbdgt` is a backend library for `bdgt` app.
 
 extern crate dirs;
+extern crate git2;
 extern crate uuid;
 extern crate rand;
 extern crate gpgme;
