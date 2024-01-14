@@ -8,14 +8,14 @@ pub trait Syncable {
 
     /// Merges remote changelog and exports the local one.
     /// 
-    /// * `timestamp` - last synchronization time (the function overwrites 
-    ///                 this value after performing synchronization)
-    /// * `last_instance` - last synchronized instance identifier (the function
-    ///                     overwrites this value after preforming synchronization)
-    /// * `changelog` - full changelog to merge (the function appends local changelog
-    ///                 to this value after preforming synchronization)
+    /// * `timestamp_rw` - last synchronization time (the function overwrites 
+    ///                    this value after performing synchronization)
+    /// * `last_instance_rw` - last synchronized instance identifier (the function
+    ///                        overwrites this value after preforming synchronization)
+    /// * `changelog_rw` - full changelog to merge (the function appends local changelog
+    ///                    to this value after preforming synchronization)
     /// * `context` - user-provided context
-    fn merge_and_export_changes<Ts, Li, Cl>(&self, timestamp: &mut Ts, last_instance: &mut Li, changelog: &mut Cl, context: &Self::Context) -> Result<()>
+    fn merge_and_export_changes<Ts, Li, Cl>(&self, timestamp_rw: &mut Ts, last_instance_rw: &mut Li, changelog_rw: &mut Cl, context: &Self::Context) -> Result<()>
     where
         Ts: std::io::Read + std::io::Write,
         Li: std::io::Read + std::io::Write,

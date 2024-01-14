@@ -1,6 +1,7 @@
 use std::array::TryFromSliceError;
+use std::io::Write;
 
-use crate::crypto::{CryptoEngine, CryptoBuffer};
+use crate::crypto::{CryptoEngine, CryptoBuffer, Kdf};
 use crate::error::{Result, Error};
 use crate::sync::{Syncable, SyncEngine};
 use crate::storage::{EncryptedTransaction, EncryptedAccount, EncryptedCategory, EncryptedPlan};
@@ -483,14 +484,100 @@ where
 {
     type Context = CryptoBuffer;
 
-    fn merge_and_export_changes<Ts, Li, Cl>(&self, _timestamp: &mut Ts, _last_instance: &mut Li, _changelog: &mut Cl, _context: &Self::Context) -> Result<()>
+    fn merge_and_export_changes<Ts, Li, Cl>(&self, timestamp_rw: &mut Ts, last_instance_rw: &mut Li, _changelog_rw: &mut Cl, auth: &Self::Context) -> Result<()>
     where
         Ts: std::io::Read + std::io::Write,
         Li: std::io::Read + std::io::Write,
         Cl: std::io::Read + std::io::Write 
     {
+        //
+        // Read remote timestamp and instance identifiers to derive decryption key
+        //
+
+        let remote_timestamp = Self::read_timestamp(timestamp_rw)?;
+        let remote_instance = Self::read_instance(last_instance_rw)?;
+
+        let remote_salt = Self::make_key_derivation_salt(&remote_timestamp, &remote_instance)?;
+        let _decryption_key = Kdf::derive_key(auth.as_bytes(), remote_salt.as_bytes(), 
+            self.crypto_engine.symmetric_key_length())?;
+
+        //
+        // Read and decrypt changelog
+        //
+
         // TODO
+
+        //
+        // Merge remote and export local changes
+        //
+
+        // TODO
+
+        //
+        // Derive new encryption key, encrypt and write updated values
+        //
+
+        let local_timestamp = chrono::Utc::now();
+        let local_instance = self.instance_id();
+
+        Self::write_timestamp(&local_timestamp, timestamp_rw)?;
+        Self::write_instance(&local_instance, last_instance_rw)?;
+
+        let local_salt = Self::make_key_derivation_salt(&local_timestamp, &local_instance)?;
+        let _encryption_key = Kdf::derive_key(auth.as_bytes(), local_salt.as_bytes(), 
+            self.crypto_engine.symmetric_key_length())?;
+
+        // TODO
+
         Ok(())
+    }
+}
+
+impl<Ce, Se, St> Budget<Ce, Se, St>
+where
+    Ce: CryptoEngine,
+    Se: SyncEngine,
+    St: DataStorage
+{
+    fn read_timestamp<R: std::io::Read>(timestamp_reader: &mut R) -> Result<Timestamp> {
+        let mut buffer = [0; std::mem::size_of::<i64>()];
+        timestamp_reader.read_exact(&mut buffer)?;
+
+        let seconds = i64::from_le_bytes(buffer);
+        let result = Timestamp::from_timestamp(seconds, 0)
+            .expect("Check timestamp in repository for validity");
+
+        Ok(result)
+    }
+
+    fn write_timestamp<W: std::io::Write>(timestamp: &Timestamp, timestamp_writer: &mut W) -> Result<()> {
+        let now = timestamp
+            .timestamp()
+            .to_le_bytes();
+
+        timestamp_writer.write_all(&now)?;
+
+        Ok(())
+    }
+
+    fn read_instance<R: std::io::Read>(last_instance_reader: &mut R) -> Result<InstanceId> {
+        let mut instance = InstanceId::new();
+        last_instance_reader.read_to_string(&mut instance)?;
+
+        Ok(instance)
+    }
+
+    fn write_instance<W: std::io::Write>(instance: &InstanceId, last_instance_writer: &mut W) -> Result<()> {
+        last_instance_writer.write_all(instance.as_bytes())?;
+        Ok(())
+    }
+
+    fn make_key_derivation_salt(timestamp: &Timestamp, instance: &InstanceId) -> Result<CryptoBuffer> {
+        let mut salt = Vec::new();
+        salt.write_all(&timestamp.timestamp().to_le_bytes())?;
+        salt.write_all(instance.as_bytes())?;
+
+        Ok(CryptoBuffer::from(salt))
     }
 }
 

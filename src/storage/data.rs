@@ -10,7 +10,7 @@ pub type PrimaryId = Option<Id>;
 
 
 /// Type of timestamps.
-pub type Timestamp = chrono::DateTime<chrono::Utc>;
+pub type Timestamp = chrono::DateTime::<chrono::Utc>;
 
 
 /// Types of categories.
