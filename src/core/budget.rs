@@ -456,7 +456,7 @@ where
 {
     type Context = CryptoBuffer;
 
-    fn merge_and_export_changes<Ts, Li, Cl>(&self, timestamp_rw: &mut Ts, last_instance_rw: &mut Li, _changelog_rw: &mut Cl, auth: &Self::Context) -> Result<()>
+    fn merge_and_export_changes<Ts, Li, Cl>(&self, timestamp_rw: &mut Ts, last_instance_rw: &mut Li, changelog_rw: &mut Cl, auth: &Self::Context) -> Result<()>
     where
         Ts: std::io::Read + std::io::Write,
         Li: std::io::Read + std::io::Write,
@@ -470,20 +470,30 @@ where
         let remote_instance = Self::read_instance(last_instance_rw)?;
 
         let remote_salt = Self::make_key_derivation_salt(&remote_timestamp, &remote_instance)?;
-        let _decryption_key = Kdf::derive_key(auth.as_bytes(), remote_salt.as_bytes(), 
+        let decryption_key = Kdf::derive_key(auth.as_bytes(), remote_salt.as_bytes(), 
             self.crypto_engine.symmetric_key_length())?;
 
         //
         // Read and decrypt changelog
         //
 
-        // TODO
+        let mut remote_changelog = Vec::new();
+        changelog_rw.read_to_end(&mut remote_changelog)?;
+
+        let remote_changelog = self.crypto_engine
+            .decrypt_symmetric(decryption_key.as_bytes(), &remote_changelog)?;
+
+        let mut cumulative_changelog = Changelog::new(remote_changelog.as_bytes())?;
 
         //
         // Merge remote and export local changes
+        // Then join them together
         //
 
-        // TODO
+        let local_changelog = self.export_local_changes(&remote_timestamp)?;
+        self.merge_changes(&cumulative_changelog)?;
+        
+        cumulative_changelog.append(local_changelog)?;
 
         //
         // Derive new encryption key, encrypt and write updated values
@@ -496,10 +506,13 @@ where
         Self::write_instance(&local_instance, last_instance_rw)?;
 
         let local_salt = Self::make_key_derivation_salt(&local_timestamp, &local_instance)?;
-        let _encryption_key = Kdf::derive_key(auth.as_bytes(), local_salt.as_bytes(), 
+        let encryption_key = Kdf::derive_key(auth.as_bytes(), local_salt.as_bytes(), 
             self.crypto_engine.symmetric_key_length())?;
 
-        // TODO
+        let cumulative_changelog = self.crypto_engine
+            .encrypt_symmetric(encryption_key.as_bytes(), cumulative_changelog.as_bytes())?;
+
+        changelog_rw.write_all(cumulative_changelog.as_bytes())?;
 
         Ok(())
     }
@@ -552,6 +565,14 @@ where
         salt.write_all(instance.as_bytes())?;
 
         Ok(CryptoBuffer::from(salt))
+    }
+
+    fn export_local_changes(&self, _base: &Timestamp) -> Result<Changelog> {
+        todo!("export changelog")
+    }
+
+    fn merge_changes(&self, _changelog: &Changelog) -> Result<()> {
+        Ok(())
     }
 }
 

@@ -1,3 +1,4 @@
+use crate::error::Result;
 use crate::storage::{Transaction, Account, Category, Plan};
 
 
@@ -27,4 +28,19 @@ pub(crate) struct Changelog {
 
     /// Diff for plans.
     pub plans: SimpleChangelog<Plan>,
+}
+
+
+impl Changelog {
+    pub(crate) fn new(_binary_changelog: &[u8]) -> Result<Self> {
+        todo!("parse binary changelog")
+    }
+
+    pub(crate) fn append(&mut self, changelog: Changelog) -> Result<()> {
+        todo!("append new changelog")
+    }
+
+    pub(crate) fn as_bytes(&self) -> &[u8] {
+        todo!("convert to bytes")
+    }
 }

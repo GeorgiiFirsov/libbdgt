@@ -115,7 +115,6 @@ impl SyncEngine for GitSyncEngine {
             .read(true)
             .write(true)
             .create(true)
-            .append(true)
             .open(self.syncable_file_path(CHANGELOG_FILE))?;
 
         //
