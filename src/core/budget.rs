@@ -531,10 +531,8 @@ where
             _ => 0i64
         };
 
-        let result = Timestamp::from_timestamp(seconds, 0)
-            .expect("Check timestamp in repository for validity");
-
-        Ok(result)
+        Timestamp::from_timestamp(seconds, 0)
+            .ok_or(Error::from_message("Check timestamp in repository for validity"))
     }
 
     fn write_timestamp<W: std::io::Write>(timestamp: &Timestamp, timestamp_writer: &mut W) -> Result<()> {
@@ -542,9 +540,9 @@ where
             .timestamp()
             .to_le_bytes();
 
-        timestamp_writer.write_all(&now)?;
-
-        Ok(())
+        timestamp_writer
+            .write_all(&now)
+            .map_err(Error::from)
     }
 
     fn read_instance<R: std::io::Read>(last_instance_reader: &mut R) -> Result<InstanceId> {
@@ -555,8 +553,9 @@ where
     }
 
     fn write_instance<W: std::io::Write>(instance: &InstanceId, last_instance_writer: &mut W) -> Result<()> {
-        last_instance_writer.write_all(instance.as_bytes())?;
-        Ok(())
+        last_instance_writer
+            .write_all(instance.as_bytes())
+            .map_err(Error::from)
     }
 
     fn make_key_derivation_salt(timestamp: &Timestamp, instance: &InstanceId) -> Result<CryptoBuffer> {
