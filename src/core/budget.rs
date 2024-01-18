@@ -8,6 +8,7 @@ use crate::storage::{EncryptedTransaction, EncryptedAccount, EncryptedCategory, 
 use crate::storage::{DataStorage, Id, Timestamp, Transaction, Account, Category, Plan, CategoryType};
 use super::config::{Config, InstanceId};
 use super::changelog::{Changelog, SimpleChangelog};
+use super::MALFORMED_TIMESTAMP;
 
 
 /// Name of income transfer category.
@@ -456,7 +457,8 @@ where
 {
     type Context = CryptoBuffer;
 
-    fn merge_and_export_changes<Ts, Li, Cl>(&self, timestamp_rw: &mut Ts, last_instance_rw: &mut Li, changelog_rw: &mut Cl, auth: &Self::Context) -> Result<()>
+    fn merge_and_export_changes<Ts, Li, Cl>(&self, timestamp_rw: &mut Ts, last_instance_rw: &mut Li, 
+        changelog_rw: &mut Cl, last_sync: &Timestamp, auth: &Self::Context) -> Result<()>
     where
         Ts: std::io::Read + std::io::Write,
         Li: std::io::Read + std::io::Write,
@@ -490,7 +492,7 @@ where
         // Then join them together
         //
 
-        let local_changelog = self.export_local_changes(&remote_timestamp)?;
+        let local_changelog = self.export_local_changes(&last_sync)?;
         self.merge_changes(&cumulative_changelog)?;
         
         cumulative_changelog.append(local_changelog)?;
@@ -532,16 +534,16 @@ where
         };
 
         Timestamp::from_timestamp(seconds, 0)
-            .ok_or(Error::from_message("Check timestamp in repository for validity"))
+            .ok_or(Error::from_message(MALFORMED_TIMESTAMP))
     }
 
     fn write_timestamp<W: std::io::Write>(timestamp: &Timestamp, timestamp_writer: &mut W) -> Result<()> {
-        let now = timestamp
+        let timestamp = timestamp
             .timestamp()
             .to_le_bytes();
 
         timestamp_writer
-            .write_all(&now)
+            .write_all(&timestamp)
             .map_err(Error::from)
     }
 

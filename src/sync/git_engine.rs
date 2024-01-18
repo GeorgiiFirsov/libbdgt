@@ -1,8 +1,9 @@
 use crate::location::Location;
+use crate::storage::Timestamp;
 use crate::error::{Result, Error};
 use super::engine::SyncEngine;
 use super::syncable::Syncable;
-use super::REMOTE_ALREADY_EXIST;
+use super::{REMOTE_ALREADY_EXIST, MALFORMED_LAST_SYNC_TIMESTAMP};
 
 
 /// Name of git's remote for the repository.
@@ -22,6 +23,9 @@ const CFG_EMAIL: &str = "email";
 
 /// Synchronization folder.
 const SYNC_FORDER: &str = "sync";
+
+/// File that holds last synchronization time.
+const LAST_SYNC_FILE: &str = "last-sync";
 
 /// Repository folder.
 const SYNC_REPO: &str = "repository";
@@ -43,6 +47,9 @@ pub struct GitSyncEngine {
 
     /// Path to repository's home.
     repo_path: std::path::PathBuf,
+
+    /// Path to last sync timestamp file.
+    last_sync_path: std::path::PathBuf,
 
     /// Default git configuration.
     config: git2::Config,
@@ -74,6 +81,17 @@ impl GitSyncEngine {
         };
 
         //
+        // Create last sync file
+        //
+
+        let last_sync_path = Self::sync_last_sync_path(loc);
+        let january_1970 = Timestamp::from_timestamp(0, 0)
+            .expect("Zero is a valid timestamp");
+
+        let mut file = std::fs::File::create(last_sync_path)?;
+        Self::write_last_sync(&mut file, &january_1970)?;
+
+        //
         // Now I can just open repository and build engine
         //
 
@@ -82,9 +100,12 @@ impl GitSyncEngine {
 
     pub fn open<L: Location>(loc: &L) -> Result<Self> {
         let repo_path = Self::sync_repo_path(loc);
+        let last_sync_path = Self::sync_last_sync_path(loc);
+
         Ok(GitSyncEngine { 
             repo: git2::Repository::open(&repo_path)?,
             repo_path: repo_path,
+            last_sync_path: last_sync_path,
             config: git2::Config::open_default()?,
         })
     }
@@ -118,11 +139,19 @@ impl SyncEngine for GitSyncEngine {
             .open(self.syncable_file_path(CHANGELOG_FILE))?;
 
         //
-        // Perform actual synchronization
+        // Perform actual synchronization (read last sync timestamp just before and
+        // write right after the process)
         //
 
-        syncable.merge_and_export_changes(&mut timestamp_file, 
-            &mut last_instance_file, &mut changelog_file, context)?;
+        let mut last_sync_file = std::fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open(&self.last_sync_path)?;
+
+        syncable.merge_and_export_changes(&mut timestamp_file, &mut last_instance_file, 
+            &mut changelog_file, &Self::read_last_sync(&mut last_sync_file)?, context)?;
+
+        Self::write_last_sync(&mut last_sync_file, &chrono::Utc::now())?;
 
         //
         // Now commit new versions of files and push to remote
@@ -234,6 +263,30 @@ impl GitSyncEngine {
 
 
 impl GitSyncEngine {
+    fn read_last_sync<R: std::io::Read>(last_sync: &mut R) -> Result<Timestamp> {
+        let mut buffer = [0; std::mem::size_of::<i64>()];
+        let seconds = match last_sync.read_exact(&mut buffer) {
+            Ok(_) => i64::from_le_bytes(buffer),
+            _ => 0i64
+        };
+
+        Timestamp::from_timestamp(seconds, 0)
+            .ok_or(Error::from_message(MALFORMED_LAST_SYNC_TIMESTAMP))
+    }
+
+    fn write_last_sync<W: std::io::Write>(last_sync: &mut W, timestamp: &Timestamp) -> Result<()> {
+        let timestamp = timestamp
+            .timestamp()
+            .to_le_bytes();
+
+        last_sync
+            .write_all(&timestamp)
+            .map_err(Error::from)
+    }
+}
+
+
+impl GitSyncEngine {
     fn sync_folder<L: Location>(loc: &L) -> std::path::PathBuf {
         loc.root()
             .join(SYNC_FORDER)
@@ -242,6 +295,11 @@ impl GitSyncEngine {
     fn sync_repo_path<L: Location>(loc: &L) -> std::path::PathBuf {
         Self::sync_folder(loc)
             .join(SYNC_REPO)
+    }
+
+    fn sync_last_sync_path<L: Location>(loc: &L) -> std::path::PathBuf {
+        Self::sync_folder(loc)
+            .join(LAST_SYNC_FILE)
     }
 
     fn syncable_file_path(&self, file: &str) -> std::path::PathBuf {
