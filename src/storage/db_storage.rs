@@ -1,6 +1,7 @@
-use crate::error::{Result, Error};
 use crate::location::Location;
-use super::data::{EncryptedTransaction, EncryptedCategory, EncryptedAccount, EncryptedPlan, Id, Timestamp, CategoryType};
+use crate::error::{Result, Error};
+use crate::datetime::{Clock, Timestamp};
+use super::data::{EncryptedTransaction, EncryptedCategory, EncryptedAccount, EncryptedPlan, Id, CategoryType};
 use super::storage::DataStorage;
 use super::{CONSISTENCY_VIOLATION, CANNOT_DELETE_PREDEFINED, CANNOT_MODIFY_PREDEFINED};
 
@@ -89,23 +90,23 @@ impl DataStorage for DbStorage {
     fn add_transaction(&self, transaction: EncryptedTransaction) -> Result<()> {
         let statement_fmt = match transaction.id {
             None => r#"
-                INSERT INTO transactions (timestamp, description, account_id, category_id, amount, _change_timestamp)
-                VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+                INSERT INTO transactions (timestamp, description, account_id, category_id, amount)
+                VALUES (?1, ?2, ?3, ?4, ?5)
             "#,
             Some(_) => r#"
-                INSERT INTO transactions (transaction_id, timestamp, description, account_id, category_id, amount, _change_timestamp)
-                VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+                INSERT INTO transactions (transaction_id, timestamp, description, account_id, category_id, amount)
+                VALUES (?1, ?2, ?3, ?4, ?5, ?6)
             "#
         };
         
         match transaction.id {
             None => self.db.execute(statement_fmt, 
                 rusqlite::params![transaction.timestamp, transaction.description, transaction.account_id, 
-                    transaction.category_id, transaction.amount, Self::current_datetime()])?,
+                    transaction.category_id, transaction.amount])?,
                 
             Some(id) => self.db.execute(statement_fmt, 
                 rusqlite::params![id, transaction.timestamp, transaction.description, transaction.account_id, 
-                    transaction.category_id, transaction.amount, Self::current_datetime()])?
+                    transaction.category_id, transaction.amount])?
         };
 
         Ok(())
@@ -119,7 +120,7 @@ impl DataStorage for DbStorage {
         "#;
 
         self.db
-            .execute(statement_fmt, rusqlite::params![Self::current_datetime(), transaction])?;
+            .execute(statement_fmt, rusqlite::params![Clock::now(), transaction])?;
 
         Ok(())
     }
@@ -249,21 +250,21 @@ impl DataStorage for DbStorage {
     fn add_account(&self, account: EncryptedAccount) -> Result<()> {
         let statement_fmt = match account.id {
             None => r#"
-                INSERT INTO accounts (name, balance, _change_timestamp)
-                VALUES (?1, ?2, ?3)
+                INSERT INTO accounts (name, balance)
+                VALUES (?1, ?2)
             "#,
             Some(_) => r#"
-                INSERT INTO accounts (account_id, name, balance, _change_timestamp)
-                VALUES (?1, ?2, ?3, ?4)
+                INSERT INTO accounts (account_id, name, balance)
+                VALUES (?1, ?2, ?3)
             "#
         };
 
         match account.id {
             None => self.db.execute(statement_fmt, 
-                rusqlite::params![account.name, account.balance, Self::current_datetime()])?,
+                rusqlite::params![account.name, account.balance])?,
 
             Some(id) => self.db.execute(statement_fmt,
-                rusqlite::params![id, account.name, account.balance, Self::current_datetime()])?
+                rusqlite::params![id, account.name, account.balance])?
         };
 
         Ok(())
@@ -279,7 +280,7 @@ impl DataStorage for DbStorage {
         "#;
 
         self.db
-            .execute(statement_fmt, rusqlite::params![account.name, account.balance, Self::current_datetime(), account.id])?;
+            .execute(statement_fmt, rusqlite::params![account.name, account.balance, Clock::now(), account.id])?;
 
         Ok(())
     }
@@ -298,7 +299,7 @@ impl DataStorage for DbStorage {
             "#;
 
             self.db
-                .execute(statement_fmt, rusqlite::params![Self::current_datetime(), account])?;
+                .execute(statement_fmt, rusqlite::params![Clock::now(), account])?;
         }
 
         //
@@ -315,7 +316,7 @@ impl DataStorage for DbStorage {
         "#;
 
         self.db
-            .execute(statement_fmt, rusqlite::params![Self::current_datetime(), account])?;
+            .execute(statement_fmt, rusqlite::params![Clock::now(), account])?;
 
         Ok(())
     }
@@ -349,22 +350,22 @@ impl DataStorage for DbStorage {
     fn add_category(&self, category: EncryptedCategory) -> Result<()> {
         let statement_fmt = match category.id {
             None => r#"
-                    INSERT INTO categories (name, type, _change_timestamp)
-                    VALUES (?1, ?2, ?3)
+                    INSERT INTO categories (name, type)
+                    VALUES (?1, ?2)
                 "#,
 
             Some(_) => r#"
-                    INSERT INTO categories (category_id, name, type, _change_timestamp)
-                    VALUES (?1, ?2, ?3, ?4)
+                    INSERT INTO categories (category_id, name, type)
+                    VALUES (?1, ?2, ?3)
                 "#
         };
 
         match category.id {
             None => self.db.execute(statement_fmt, 
-                rusqlite::params![category.name, category.category_type, Self::current_datetime()])?,
+                rusqlite::params![category.name, category.category_type])?,
 
             Some(id) => self.db.execute(statement_fmt, 
-                rusqlite::params![id, category.name, category.category_type, Self::current_datetime()])?
+                rusqlite::params![id, category.name, category.category_type])?
         };
 
         Ok(())
@@ -384,7 +385,7 @@ impl DataStorage for DbStorage {
         "#;
 
         self.db
-            .execute(statement_fmt, rusqlite::params![category.name, category.category_type, Self::current_datetime(), category.id])?;
+            .execute(statement_fmt, rusqlite::params![category.name, category.category_type, Clock::now(), category.id])?;
 
         Ok(())
     }
@@ -408,7 +409,7 @@ impl DataStorage for DbStorage {
         "#;
 
         self.db
-            .execute(statement_fmt, rusqlite::params![Self::current_datetime(), category])?;
+            .execute(statement_fmt, rusqlite::params![Clock::now(), category])?;
 
         Ok(())
     }
@@ -454,21 +455,21 @@ impl DataStorage for DbStorage {
     fn add_plan(&self, plan: EncryptedPlan) -> Result<()> {
         let statement_fmt = match plan.id {
             None => r#"
-                INSERT INTO plans (category_id, name, amount_limit, _change_timestamp)
-                VALUES (?1, ?2, ?3, ?4)
+                INSERT INTO plans (category_id, name, amount_limit)
+                VALUES (?1, ?2, ?3)
             "#,
             Some(_) => r#"
-                INSERT INTO plans (plan_id, category_id, name, amount_limit, _change_timestamp)
-                VALUES (?1, ?2, ?3, ?4, ?5)
+                INSERT INTO plans (plan_id, category_id, name, amount_limit)
+                VALUES (?1, ?2, ?3, ?4)
             "#
         };
 
         match plan.id {
             None => self.db.execute(statement_fmt, 
-                rusqlite::params![plan.category_id, plan.name, plan.amount_limit, Self::current_datetime()])?,
+                rusqlite::params![plan.category_id, plan.name, plan.amount_limit])?,
 
             Some(id) => self.db.execute(statement_fmt,
-                rusqlite::params![id, plan.category_id, plan.name, plan.amount_limit, Self::current_datetime()])?
+                rusqlite::params![id, plan.category_id, plan.name, plan.amount_limit])?
         };
 
         Ok(())
@@ -486,7 +487,7 @@ impl DataStorage for DbStorage {
 
         self.db
             .execute(statement_fmt, rusqlite::params![plan.category_id, 
-                plan.name, plan.amount_limit, Self::current_datetime(), plan.id])?;
+                plan.name, plan.amount_limit, Clock::now(), plan.id])?;
 
         Ok(())
     }
@@ -499,7 +500,7 @@ impl DataStorage for DbStorage {
         "#;
 
         self.db
-            .execute(statement_fmt, rusqlite::params![Self::current_datetime(), plan])?;
+            .execute(statement_fmt, rusqlite::params![Clock::now(), plan])?;
 
         Ok(())
     }
@@ -584,9 +585,13 @@ impl DbStorage {
                 account_id          BLOB        PRIMARY KEY DEFAULT (randomblob(16)),
                 balance             BYTEA       NOT NULL,
                 name                BYTEA       NOT NULL,
-                _change_timestamp   DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                _creation_timestamp DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                _change_timestamp   DATETIME    NULL,
                 _removal_timestamp  DATETIME    NULL
             ) WITHOUT ROWID;
+
+            CREATE INDEX accounts_by_creation_timestamp
+                ON accounts (_creation_timestamp);
 
             CREATE INDEX accounts_by_change_timestamp
                 ON accounts (_change_timestamp);
@@ -598,12 +603,16 @@ impl DbStorage {
                 category_id         BLOB        PRIMARY KEY DEFAULT (randomblob(16)),
                 name                BYTEA       NOT NULL,
                 type                TINYINT     NOT NULL,
-                _change_timestamp   DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                _creation_timestamp DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                _change_timestamp   DATETIME    NULL,
                 _removal_timestamp  DATETIME    NULL
             ) WITHOUT ROWID;
 
             CREATE INDEX categories_by_type
                 ON categories (type);
+
+            CREATE INDEX categories_by_creation_timestamp
+                ON categories (_creation_timestamp);
 
             CREATE INDEX categories_by_change_timestamp
                 ON categories (_change_timestamp);
@@ -618,12 +627,16 @@ impl DbStorage {
                 account_id          BLOB        REFERENCES accounts(account_id),
                 category_id         BLOB        REFERENCES categories(category_id),
                 amount              BYTEA       NOT NULL,
-                _change_timestamp   DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                _creation_timestamp DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                _change_timestamp   DATETIME    NULL,
                 _removal_timestamp  DATETIME    NULL
             ) WITHOUT ROWID;
 
             CREATE INDEX transactions_by_timestamp
                 ON transactions (timestamp);
+
+            CREATE INDEX transactions_by_creation_timestamp
+                ON transactions (_creation_timestamp);
 
             CREATE INDEX transactions_by_change_timestamp
                 ON transactions (_change_timestamp);
@@ -636,12 +649,16 @@ impl DbStorage {
                 category_id         BLOB        REFERENCES categories(category_id),
                 name                BYTEA       NOT NULL,
                 amount_limit        BYTEA       NOT NULL,
-                _change_timestamp   DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                _creation_timestamp DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                _change_timestamp   DATETIME    NULL,
                 _removal_timestamp  DATETIME    NULL
             ) WITHOUT ROWID;
 
             CREATE INDEX plans_by_category
                 ON plans (category_id);
+
+            CREATE INDEX plans_by_creation_timestamp
+                ON plans (_creation_timestamp);
 
             CREATE INDEX plans_by_change_timestamp
                 ON plans (_change_timestamp);
@@ -700,10 +717,6 @@ impl DbStorage {
         }
 
         Ok(())
-    }
-
-    fn current_datetime() -> Timestamp {
-        chrono::Utc::now()
     }
 
     fn is_predefined_category(category: Id) -> bool {

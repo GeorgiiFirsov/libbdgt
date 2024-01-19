@@ -1,5 +1,6 @@
 use crate::error::Result;
-use super::data::{EncryptedTransaction, EncryptedCategory, EncryptedAccount, EncryptedPlan, Id, Timestamp, CategoryType};
+use crate::datetime::Timestamp;
+use super::data::{EncryptedTransaction, EncryptedCategory, EncryptedAccount, EncryptedPlan, Id, CategoryType};
 
 
 /// Storage trait, that provides protected data reading and writing.

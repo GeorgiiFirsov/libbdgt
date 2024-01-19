@@ -4,8 +4,9 @@ use std::io::Write;
 use crate::crypto::{CryptoEngine, CryptoBuffer, Kdf};
 use crate::error::{Result, Error};
 use crate::sync::{Syncable, SyncEngine};
+use crate::datetime::{Clock, Timestamp};
 use crate::storage::{EncryptedTransaction, EncryptedAccount, EncryptedCategory, EncryptedPlan};
-use crate::storage::{DataStorage, Id, Timestamp, Transaction, Account, Category, Plan, CategoryType};
+use crate::storage::{DataStorage, Id, Transaction, Account, Category, Plan, CategoryType};
 use super::config::{Config, InstanceId};
 use super::changelog::{Changelog, SimpleChangelog};
 use super::MALFORMED_TIMESTAMP;
@@ -152,7 +153,7 @@ where
     /// * `to_account` - account to transfer to
     pub fn add_transfer(&self, amount: isize, from_account: Id, to_account: Id) -> Result<()> {
         let amount = amount.abs();
-        let timestamp = chrono::Utc::now();
+        let timestamp = Clock::now();
 
         self.add_transaction(Transaction{
             id: None,
@@ -501,7 +502,7 @@ where
         // Derive new encryption key, encrypt and write updated values
         //
 
-        let local_timestamp = chrono::Utc::now();
+        let local_timestamp = Clock::now();
         let local_instance = self.instance_id();
 
         Self::write_timestamp(&local_timestamp, timestamp_rw)?;

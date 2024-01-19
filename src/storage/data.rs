@@ -1,3 +1,6 @@
+use crate::datetime::Timestamp;
+
+
 /// Identifier type.
 pub type Id = [u8; 16];
 
@@ -7,10 +10,6 @@ pub type Id = [u8; 16];
 /// [`Option`] is required because new instances don't have
 /// an id at creation time.
 pub type PrimaryId = Option<Id>;
-
-
-/// Type of timestamps.
-pub type Timestamp = chrono::DateTime::<chrono::Utc>;
 
 
 /// Types of categories.

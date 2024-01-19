@@ -17,6 +17,7 @@ extern crate rusqlite;
 // Public modules
 //
 
+pub mod datetime;
 pub mod location;
 pub mod storage;
 pub mod crypto;

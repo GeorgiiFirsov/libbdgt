@@ -1,5 +1,5 @@
 use crate::error::Result;
-use crate::storage::Timestamp;
+use crate::datetime::Timestamp;
 
 
 /// Trait that defines synchronization interface.

@@ -1,6 +1,6 @@
 use crate::location::Location;
-use crate::storage::Timestamp;
 use crate::error::{Result, Error};
+use crate::datetime::{Clock, Timestamp};
 use super::engine::SyncEngine;
 use super::syncable::Syncable;
 use super::{REMOTE_ALREADY_EXIST, MALFORMED_LAST_SYNC_TIMESTAMP};
@@ -151,7 +151,7 @@ impl SyncEngine for GitSyncEngine {
         syncable.merge_and_export_changes(&mut timestamp_file, &mut last_instance_file, 
             &mut changelog_file, &Self::read_last_sync(&mut last_sync_file)?, context)?;
 
-        Self::write_last_sync(&mut last_sync_file, &chrono::Utc::now())?;
+        Self::write_last_sync(&mut last_sync_file, &Clock::now())?;
 
         //
         // Now commit new versions of files and push to remote
