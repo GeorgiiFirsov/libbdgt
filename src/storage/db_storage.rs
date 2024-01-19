@@ -116,7 +116,8 @@ impl DataStorage for DbStorage {
         let statement_fmt = r#"
             SELECT transaction_id, timestamp, description, account_id, category_id, amount
               FROM transactions
-             WHERE transaction_id = ?1
+             WHERE transaction_id = ?1 AND 
+                   _removal_timestamp IS NULL
         "#;
 
         let mut result = self.query_with_params(statement_fmt, 
@@ -133,6 +134,7 @@ impl DataStorage for DbStorage {
         let statement = r#"
             SELECT transaction_id, timestamp, description, account_id, category_id, amount
               FROM transactions
+             WHERE _removal_timestamp IS NULL
              ORDER BY timestamp DESC
         "#;
 
@@ -143,7 +145,8 @@ impl DataStorage for DbStorage {
         let statement_fmt = r#"
             SELECT transaction_id, timestamp, description, account_id, category_id, amount
               FROM transactions
-             WHERE timestamp >= ?1
+             WHERE timestamp >= ?1 AND 
+                   _removal_timestamp IS NULL
              ORDER BY timestamp DESC
         "#;
 
@@ -155,7 +158,8 @@ impl DataStorage for DbStorage {
             SELECT transaction_id, timestamp, description, account_id, category_id, amount
               FROM transactions
              WHERE timestamp >= ?1 AND 
-                   timestamp < ?2
+                   timestamp < ?2 AND 
+                   _removal_timestamp IS NULL
              ORDER BY timestamp DESC
         "#;
 
@@ -166,7 +170,8 @@ impl DataStorage for DbStorage {
         let statement_fmt = r#"
             SELECT transaction_id, timestamp, description, account_id, category_id, amount
               FROM transactions
-             WHERE account_id = ?1
+             WHERE account_id = ?1 AND 
+                   _removal_timestamp IS NULL
              ORDER BY timestamp DESC
         "#;
 
@@ -178,7 +183,8 @@ impl DataStorage for DbStorage {
             SELECT transaction_id, timestamp, description, account_id, category_id, amount
               FROM transactions
              WHERE account_id = ?1 AND
-                   timestamp >= ?2
+                   timestamp >= ?2 AND 
+                   _removal_timestamp IS NULL
              ORDER BY timestamp DESC
         "#;
 
@@ -191,7 +197,8 @@ impl DataStorage for DbStorage {
               FROM transactions
              WHERE account_id = ?1 AND
                    timestamp >= ?2 AND
-                   timestamp < ?3
+                   timestamp < ?3 AND 
+                   _removal_timestamp IS NULL
              ORDER BY timestamp DESC
         "#;
 
@@ -202,7 +209,8 @@ impl DataStorage for DbStorage {
         let statement_fmt = r#"
             SELECT transaction_id, timestamp, description, account_id, category_id, amount
               FROM transactions
-             WHERE category_id = ?1
+             WHERE category_id = ?1 AND 
+                   _removal_timestamp IS NULL
              ORDER BY timestamp DESC
         "#;
 
@@ -214,7 +222,8 @@ impl DataStorage for DbStorage {
             SELECT transaction_id, timestamp, description, account_id, category_id, amount
               FROM transactions
              WHERE category_id = ?1 AND
-                   timestamp >= ?2
+                   timestamp >= ?2 AND 
+                   _removal_timestamp IS NULL
              ORDER BY timestamp DESC
         "#;
 
@@ -227,7 +236,8 @@ impl DataStorage for DbStorage {
               FROM transactions
              WHERE category_id = ?1 AND
                    timestamp >= ?2 AND
-                   timestamp < ?3
+                   timestamp < ?3 AND 
+                   _removal_timestamp IS NULL
              ORDER BY timestamp DESC
         "#;
 
@@ -252,7 +262,8 @@ impl DataStorage for DbStorage {
                SET name = ?1,
                    balance = ?2, 
                    _change_timestamp = ?3
-             WHERE account_id = ?4
+             WHERE account_id = ?4 AND 
+                   _removal_timestamp IS NULL
         "#;
 
         self.db
@@ -301,7 +312,8 @@ impl DataStorage for DbStorage {
         let statement_fmt = r#"
             SELECT account_id, name, balance
               FROM accounts
-             WHERE account_id = ?1
+             WHERE account_id = ?1 AND 
+                   _removal_timestamp IS NULL
         "#;
 
         let mut result = self.query_with_params(statement_fmt, 
@@ -318,6 +330,7 @@ impl DataStorage for DbStorage {
         let statement = r#"
             SELECT account_id, name, balance
               FROM accounts
+             WHERE _removal_timestamp IS NULL
         "#;
 
         self.query(statement, Self::account_from_row)
@@ -345,7 +358,8 @@ impl DataStorage for DbStorage {
                SET name = ?1,
                    type = ?2, 
                    _change_timestamp = ?3
-             WHERE category_id = ?4
+             WHERE category_id = ?4 AND 
+                   _removal_timestamp IS NULL
         "#;
 
         self.db
@@ -382,7 +396,8 @@ impl DataStorage for DbStorage {
         let statement_fmt = r#"
             SELECT category_id, name, type 
               FROM categories
-             WHERE category_id = ?1
+             WHERE category_id = ?1 AND 
+                   _removal_timestamp IS NULL
         "#;
 
         let mut result = self.query_with_params(statement_fmt, 
@@ -399,6 +414,7 @@ impl DataStorage for DbStorage {
         let statement = r#"
             SELECT category_id, name, type 
               FROM categories
+             WHERE _removal_timestamp IS NULL
              ORDER BY type
         "#;
 
@@ -409,7 +425,8 @@ impl DataStorage for DbStorage {
         let statement_fmt = r#"
             SELECT category_id, name, type 
               FROM categories
-             WHERE type = ?1
+             WHERE type = ?1 AND 
+                   _removal_timestamp IS NULL
              ORDER BY type
         "#;
 
@@ -435,7 +452,8 @@ impl DataStorage for DbStorage {
                    name = ?2,
                    amount_limit = ?3, 
                    _change_timestamp = ?4
-             WHERE plan_id = ?5
+             WHERE plan_id = ?5 AND 
+                   _removal_timestamp IS NULL
         "#;
 
         self.db
@@ -462,7 +480,8 @@ impl DataStorage for DbStorage {
         let statement_fmt = r#"
             SELECT plan_id, category_id, name, amount_limit 
               FROM plans
-             WHERE plan_id = ?1
+             WHERE plan_id = ?1 AND 
+                   _removal_timestamp IS NULL
         "#;
 
         let mut result = self.query_with_params(statement_fmt, 
@@ -479,6 +498,7 @@ impl DataStorage for DbStorage {
         let statement = r#"
             SELECT plan_id, category_id, name, amount_limit 
               FROM plans
+             WHERE _removal_timestamp IS NULL
              ORDER BY category_id
         "#;
 
@@ -489,7 +509,8 @@ impl DataStorage for DbStorage {
         let statement_fmt = r#"
             SELECT plan_id, category_id, name, amount_limit 
               FROM plans
-             WHERE category_id = ?1
+             WHERE category_id = ?1 AND 
+                   _removal_timestamp IS NULL
         "#;
 
         self.query_with_params(statement_fmt, rusqlite::params![category], Self::plan_from_row)
@@ -640,7 +661,7 @@ impl DbStorage {
     fn ensure_consistency(&self, table: &str, foreign_key: &str, foreign_key_value: Id) -> Result<()> {
         let statement_fmt = format!(r#"
             SELECT COUNT(*) FROM {}
-             WHERE _removal_timestamp IS NOT NULL
+             WHERE _removal_timestamp IS NULL
                AND {} = ?1
             "#, table, foreign_key);
 
