@@ -14,3 +14,6 @@ const REMOTE_ALREADY_EXIST: &str = "Remote is already associated with repository
 
 /// Error shown in case of malformed timestamp file.
 const MALFORMED_LAST_SYNC_TIMESTAMP: &str = "Last synchronization timestamp file is malformed";
+
+/// Merge with remote changes is required, which is not intended to happen.
+const REMOTE_CONFLICT: &str = "Conflicting changes are made in local and remote repositories";

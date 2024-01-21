@@ -3,7 +3,7 @@ use crate::error::{Result, Error};
 use crate::datetime::{Clock, Timestamp};
 use super::engine::SyncEngine;
 use super::syncable::Syncable;
-use super::{REMOTE_ALREADY_EXIST, MALFORMED_LAST_SYNC_TIMESTAMP};
+use super::{REMOTE_ALREADY_EXIST, MALFORMED_LAST_SYNC_TIMESTAMP, REMOTE_CONFLICT};
 
 
 /// Name of git's remote for the repository.
@@ -11,6 +11,9 @@ const REMOTE_NAME: &str = "origin";
 
 /// Name of reference to update on commit.
 const REF_NAME: &str = "HEAD";
+
+/// Name of reference to fetched head.
+const FETCH_REF_NAME: &str = "FETCH_HEAD";
 
 /// Branch name.
 const BRANCH_NAME: &str = "main";
@@ -190,7 +193,83 @@ impl SyncEngine for GitSyncEngine {
 
 impl GitSyncEngine {
     fn pull_remote(&self) -> Result<()> {
-        // TODO
+        //
+        // Fetch remote changes
+        //
+
+        self.repo.find_remote(REMOTE_NAME)
+            .and_then(|mut remote| remote.fetch(&[BRANCH_NAME], None, None))?;
+
+        let fetch_head = self.repo
+            .find_reference(FETCH_REF_NAME)?;
+
+        let fetch_commit = self.repo
+            .reference_to_annotated_commit(&fetch_head)?;
+
+        //
+        // Perform merge analysis
+        //
+
+        let (merge_analysis, _) = self.repo
+            .merge_analysis(&[&fetch_commit])?;
+
+        if merge_analysis.is_up_to_date() {
+            return Ok(());
+        }
+
+        if !merge_analysis.is_fast_forward() {
+            //
+            // Fast-forward is only possible option. If something else
+            // is occurred, it is considered to be an error.
+            //
+
+            return Err(Error::from_message(REMOTE_CONFLICT));
+        }
+
+        //
+        // Perform fast-forward
+        // Looking up for branch by its reference name is required here to
+        // detect pulling into empty repository
+        //
+
+        let ref_name = format!("refs/heads/{}", BRANCH_NAME);
+        match self.repo.find_reference(&ref_name) {
+            Ok(mut branch_ref) => {
+                //
+                // Actual fast-forward 
+                //
+
+                let reflog_msg = format!("Fast-forward: Setting {} to {}", 
+                    ref_name, fetch_commit.id());
+
+                branch_ref.set_target(fetch_commit.id(), &reflog_msg)?;
+                self.repo.set_head(&ref_name)?;
+
+                self.repo.checkout_head(Some(
+                    git2::build::CheckoutBuilder::default()
+                        .force()
+                ))?;
+            },
+            Err(_) => {
+                //
+                // Pulling into empty local repository
+                //
+
+                let reflog_msg = format!("Setting {} to {}", 
+                    ref_name, fetch_commit.id());
+
+                self.repo.reference(&ref_name, fetch_commit.id(), true, &reflog_msg)?;
+                self.repo.set_head(&ref_name)?;
+
+                self.repo.checkout_head(Some(
+                    git2::build::CheckoutBuilder::default()
+                        .allow_conflicts(true)
+                        .conflict_style_merge(true)
+                        .force()
+                ))?;
+            }
+        }
+
         Ok(())
     }
 
