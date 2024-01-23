@@ -54,6 +54,26 @@ impl Changelog {
             plans: SimpleChangelog::new()
         };
 
+        //
+        // Parse changelog record-by-record. Records have the following
+        // grammar:
+        //
+        // record       = record-type record-data ;
+        //
+        // record-type  = A 
+        //              | C
+        //              | R ;
+        //
+        // record-data  = data-type data-content ;
+        //
+        // data-type    = A
+        //              | C
+        //              | T
+        //              | P ;
+        //
+        // data-content = <serialized  data of account, category, transaction or plan>
+        //
+
         let mut changelog = std::io::Cursor::new(binary_changelog);
         while let Some(_record) = Self::read_record(&mut changelog)? {
             todo!("Implement record handling")
