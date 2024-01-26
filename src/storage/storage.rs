@@ -4,6 +4,22 @@ use super::data::{EncryptedTransaction, EncryptedCategory, EncryptedAccount, Enc
 
 
 /// Storage trait, that provides protected data reading and writing.
+///
+/// For all data types supported by storage, there are several operations:
+///
+/// - creation operation. It writes creation timestamp from data meta
+///   information if present. Otherwise, current datetime is written.
+///
+/// - update operation. It does not update any timestamps in storage.
+///
+/// - update change timestamp. This operation updates change timestamp
+///   for a given item.
+///
+/// - removal operation. It writes removal timestamp if present. Otherwise,
+///   current datetime is written.
+///
+/// - query operation. It does not update any timestamps, just reads all
+///   of them.
 pub trait DataStorage {
     /// Predefined income transfer category identifier.
     const TRANSFER_INCOME_ID: Id;
