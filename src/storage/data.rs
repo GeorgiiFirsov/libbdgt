@@ -1,3 +1,5 @@
+use serde::{Serialize, Deserialize};
+
 use crate::datetime::Timestamp;
 
 
@@ -13,7 +15,7 @@ pub type PrimaryId = Option<Id>;
 
 
 /// Types of categories.
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum CategoryType {
     /// Incomes
     Income,
@@ -23,7 +25,45 @@ pub enum CategoryType {
 }
 
 
+/// Meta information about an entity
+#[derive(Serialize, Deserialize, Clone, Copy)]
+pub struct MetaInfo {
+    // Creation timestamp
+    pub added_timestamp: Option<Timestamp>,
+    
+    // Change timestamp
+    pub changed_timestamp: Option<Timestamp>,
+
+    // Removal timestamp
+    pub removed_timestamp: Option<Timestamp>
+}
+
+
+impl Default for MetaInfo {
+    fn default() -> Self {
+        MetaInfo::new(None, None, None)
+    }
+}
+
+
+impl MetaInfo {
+    /// Constructs a meta info instance with given timestamps.
+    /// 
+    /// * `added_timestamp` - creation timestamp or `None`
+    /// * `changed_timestamp` - change timestamp or `None`
+    /// * `removed_timestamp` - removal timestamp or `None`
+    pub fn new(added_timestamp: Option<Timestamp>, changed_timestamp: Option<Timestamp>, removed_timestamp: Option<Timestamp>) -> Self {
+        MetaInfo {
+            added_timestamp, 
+            changed_timestamp, 
+            removed_timestamp
+        }
+    }
+}
+
+
 /// User-friendly transaction structure.
+#[derive(Serialize, Deserialize)]
 pub struct Transaction {
     /// Identifier
     pub id: PrimaryId,
@@ -42,6 +82,9 @@ pub struct Transaction {
 
     /// Amount of money affected
     pub amount: isize,
+
+    /// Meta info
+    pub meta_info: MetaInfo
 }
 
 
@@ -56,10 +99,12 @@ pub struct EncryptedTransaction {
     pub account_id: Id,
     pub category_id: Id,
     pub amount: Vec<u8>,
+    pub meta_info: MetaInfo
 }
 
 
 /// User-friendly category structure.
+#[derive(Serialize, Deserialize)]
 pub struct Category {
     /// Identifier
     pub id: PrimaryId,
@@ -69,6 +114,9 @@ pub struct Category {
 
     /// Type of category
     pub category_type: CategoryType,
+
+    /// Meta info
+    pub meta_info: MetaInfo
 }
 
 
@@ -80,10 +128,12 @@ pub struct EncryptedCategory {
     pub id: PrimaryId,
     pub name: Vec<u8>,
     pub category_type: CategoryType,
+    pub meta_info: MetaInfo
 }
 
 
 /// User-friendly account structure.
+#[derive(Serialize, Deserialize)]
 pub struct Account {
     /// Identifier
     pub id: PrimaryId,
@@ -93,6 +143,9 @@ pub struct Account {
 
     /// Current account balance
     pub balance: isize,
+
+    /// Meta info
+    pub meta_info: MetaInfo
 }
 
 
@@ -103,11 +156,13 @@ pub struct Account {
 pub struct EncryptedAccount {
     pub id: PrimaryId,
     pub name: Vec<u8>,
-    pub balance: Vec<u8>
+    pub balance: Vec<u8>,
+    pub meta_info: MetaInfo
 }
 
 
 /// User-friendly plan structure.
+#[derive(Serialize, Deserialize)]
 pub struct Plan {
     /// Identifier
     pub id: PrimaryId,
@@ -120,6 +175,9 @@ pub struct Plan {
 
     /// Current plan balance
     pub amount_limit: isize,
+
+    /// Meta info
+    pub meta_info: MetaInfo
 }
 
 
@@ -131,5 +189,6 @@ pub struct EncryptedPlan {
     pub id: PrimaryId,
     pub category_id: Id,
     pub name: Vec<u8>,
-    pub amount_limit: Vec<u8>
+    pub amount_limit: Vec<u8>,
+    pub meta_info: MetaInfo
 }

@@ -8,18 +8,20 @@ use super::data::{EncryptedTransaction, EncryptedCategory, EncryptedAccount, Enc
 /// For all data types supported by storage, there are several operations:
 ///
 /// - creation operation. It writes creation timestamp from data meta
-///   information if present. Otherwise, current datetime is written.
+///   information if present. Otherwise, an error is occurred.
 ///
-/// - update operation. It does not update any timestamps in storage.
+/// - update operation. It writes change timestamp from data meta
+///   information if present. Otherwise, change timestamp is not updated.
 ///
-/// - update change timestamp. This operation updates change timestamp
-///   for a given item.
-///
-/// - removal operation. It writes removal timestamp if present. Otherwise,
-///   current datetime is written.
+/// - removal operation. It writes removal timestamp always.
 ///
 /// - query operation. It does not update any timestamps, just reads all
 ///   of them.
+/// 
+/// All [`None`] values as timestamps mean not to update corresponding
+/// timestamp in storage. I.e. if [`None`] is specified as change
+/// timestamp in update operation, then the opration will be performed,
+/// but change timestamp will not be updated.
 pub trait DataStorage {
     /// Predefined income transfer category identifier.
     const TRANSFER_INCOME_ID: Id;
@@ -35,7 +37,8 @@ pub trait DataStorage {
     /// Remove transaction.
     /// 
     /// * `transaction` - identifier of a transaction to remove
-    fn remove_transaction(&self, transaction: Id) -> Result<()>;
+    /// * `removal_timestamp` - this value will be written as removal timestamp
+    fn remove_transaction(&self, transaction: Id, removal_timestamp: Timestamp) -> Result<()>;
 
     /// Return transaction with a given identifier.
     /// 
@@ -134,8 +137,8 @@ pub trait DataStorage {
     /// If account has transaction and `force` is false, then this function fails.
     /// 
     /// * `account` - identifier of an account to remove
-    /// * `force` - if true, then account is deleted anyway with all of its transactions
-    fn remove_account(&self, account: Id, force: bool) -> Result<()>;
+    /// * `removal_timestamp` - this value will be written as removal timestamp
+    fn remove_account(&self, account: Id, removal_timestamp: Timestamp) -> Result<()>;
 
     /// Return account with a given identifier.
     /// 
@@ -162,7 +165,8 @@ pub trait DataStorage {
     /// remove category with existing transactions and/or plans.
     /// 
     /// * `category` - identifier of category to remove
-    fn remove_category(&self, category: Id) -> Result<()>;
+    /// * `removal_timestamp` - this value will be written as removal timestamp
+    fn remove_category(&self, category: Id, removal_timestamp: Timestamp) -> Result<()>;
 
     /// Return category with a given identifier.
     /// 
@@ -190,7 +194,8 @@ pub trait DataStorage {
     /// Remove plan.
     /// 
     /// * `plan` - identifier of plan to remove
-    fn remove_plan(&self, plan: Id) -> Result<()>;
+    /// * `removal_timestamp` - this value will be written as removal timestamp
+    fn remove_plan(&self, plan: Id, removal_timestamp: Timestamp) -> Result<()>;
 
     /// Return plan with a given identifier.
     /// 

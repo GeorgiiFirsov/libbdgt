@@ -4,8 +4,8 @@ use std::io::Write;
 use crate::crypto::{CryptoEngine, CryptoBuffer, Kdf};
 use crate::error::{Result, Error};
 use crate::sync::{Syncable, SyncEngine};
-use crate::datetime::{Clock, Timestamp};
-use crate::storage::{EncryptedTransaction, EncryptedAccount, EncryptedCategory, EncryptedPlan};
+use crate::datetime::{Clock, Timestamp, JANUARY_1970};
+use crate::storage::{EncryptedTransaction, EncryptedAccount, EncryptedCategory, EncryptedPlan, MetaInfo};
 use crate::storage::{DataStorage, Id, Transaction, Account, Category, Plan, CategoryType};
 use super::config::{Config, InstanceId};
 use super::changelog::{Changelog, SimpleChangelog};
@@ -101,18 +101,21 @@ where
     pub fn initialize(&self) -> Result<()> {
         //
         // Add predefined items and ensure, that they have proper identifiers
+        // Predefined items creation timestamp is always equal to January 1970
         //
 
         self.add_category(Category { 
             id: Some(St::TRANSFER_INCOME_ID), 
             name: TRANSFER_INCOME_CAT_NAME.to_owned(), 
-            category_type: CategoryType::Income 
+            category_type: CategoryType::Income,
+            meta_info: MetaInfo::new(Some(*JANUARY_1970), None, None)
         })?;
 
         self.add_category(Category { 
             id: Some(St::TRANSFER_OUTCOME_ID), 
             name: TRANSFER_OUTCOME_CAT_NAME.to_owned(),
-            category_type: CategoryType::Outcome
+            category_type: CategoryType::Outcome,
+            meta_info: MetaInfo::new(Some(*JANUARY_1970), None, None)
         })
     }
 
@@ -157,11 +160,12 @@ where
 
         self.add_transaction(Transaction{
             id: None,
-            timestamp: timestamp.clone(),
+            timestamp: timestamp,
             description: TRANSFER_INCOME_DESCRIPTION.to_owned(),
             account_id: to_account,
             category_id: St::TRANSFER_INCOME_ID,
-            amount: amount
+            amount: amount,
+            meta_info: MetaInfo::new(Some(timestamp), None, None)
         })?;
 
         self.add_transaction(Transaction{
@@ -170,7 +174,8 @@ where
             description: TRANSFER_OUTCOME_DESCRIPTION.to_owned(),
             account_id: from_account,
             category_id: St::TRANSFER_OUTCOME_ID,
-            amount: -amount
+            amount: -amount,
+            meta_info: MetaInfo::new(Some(timestamp), None, None)
         })?;
 
         Ok(())
@@ -179,7 +184,9 @@ where
     /// Remove transaction.
     /// 
     /// * `transaction` - identifier of a transaction to remove
-    pub fn remove_transaction(&self, transaction: Id, emergency: bool) -> Result<()> {
+    /// * `emergency` - if `true`, then the linked account will not be updated
+    /// * `removal_timestame` - this value will be written as removal timestamp
+    pub fn remove_transaction(&self, transaction: Id, emergency: bool, removal_timestamp: Timestamp) -> Result<()> {
         if !emergency {
             //
             // Here is the same story: it would be probably better to use
@@ -206,7 +213,7 @@ where
             self.storage.update_account(self.encrypt_account(&decrypted_account)?)?;
         }
 
-        self.storage.remove_transaction(transaction)
+        self.storage.remove_transaction(transaction, removal_timestamp)
     }
 
     // Return all transactions.
@@ -309,8 +316,20 @@ where
     /// 
     /// * `account` - identifier of an account to remove
     /// * `force` - if true, then account is deleted anyway with all of its transactions
-    pub fn remove_account(&self, account: Id, force: bool) -> Result<()> {
-        self.storage.remove_account(account, force)
+    /// * `removal_timestame` - this value will be written as removal timestamp
+    pub fn remove_account(&self, account: Id, force: bool, removal_timestamp: Timestamp) -> Result<()> {
+        if force {
+            //
+            // Forced removal is requested, hence I need to remove
+            // all linked transactions first
+            //
+
+            for transaction in self.storage.transactions_of(account)? {
+                self.storage.remove_transaction(transaction.id.unwrap(), removal_timestamp)?;
+            }
+        }
+
+        self.storage.remove_account(account, removal_timestamp)
     }
 
     /// Return account with a given identifier.
@@ -344,8 +363,9 @@ where
     /// remove category with existing transactions.
     /// 
     /// * `category` - identifier of category to remove
-    pub fn remove_category(&self, category: Id) -> Result<()> {
-        self.storage.remove_category(category)
+    /// * `removal_timestame` - this value will be written as removal timestamp
+    pub fn remove_category(&self, category: Id, removal_timestamp: Timestamp) -> Result<()> {
+        self.storage.remove_category(category, removal_timestamp)
     }
 
     /// Return category with a given identifier.
@@ -386,8 +406,9 @@ where
     /// Remove plan.
     /// 
     /// * `plan` - identifier of plan to remove
-    pub fn remove_plan(&self, plan: Id) -> Result<()> {
-        self.storage.remove_plan(plan)
+    /// * `removal_timestame` - this value will be written as removal timestamp
+    pub fn remove_plan(&self, plan: Id, removal_timestamp: Timestamp) -> Result<()> {
+        self.storage.remove_plan(plan, removal_timestamp)
     }
 
     /// Return plan with a given identifier.
@@ -627,7 +648,8 @@ where
             description: encrypted_description.as_bytes().into(),
             account_id: transaction.account_id,
             category_id: transaction.category_id,
-            amount: encrypted_amount.as_bytes().into()
+            amount: encrypted_amount.as_bytes().into(),
+            meta_info: transaction.meta_info
         })
     }
 
@@ -641,7 +663,8 @@ where
             description: decrypted_description,
             account_id: encrypted_transaction.account_id,
             category_id: encrypted_transaction.category_id,
-            amount: decrypted_amount
+            amount: decrypted_amount,
+            meta_info: encrypted_transaction.meta_info
         })
     }
 
@@ -652,7 +675,8 @@ where
         Ok(EncryptedAccount { 
             id: account.id,
             name: encrypted_name.as_bytes().into(), 
-            balance: encrypted_balance.as_bytes().into() 
+            balance: encrypted_balance.as_bytes().into(),
+            meta_info: account.meta_info
         })
     }
 
@@ -663,7 +687,8 @@ where
         Ok(Account { 
             id: encrypted_account.id,
             name: decrypted_name, 
-            balance: decrypted_balance
+            balance: decrypted_balance,
+            meta_info: encrypted_account.meta_info
         })
     }
 
@@ -673,7 +698,8 @@ where
         Ok(EncryptedCategory {
             id: category.id,
             name: encrypted_name.as_bytes().into(),
-            category_type: category.category_type
+            category_type: category.category_type,
+            meta_info: category.meta_info
         })
     }
 
@@ -683,7 +709,8 @@ where
         Ok(Category { 
             id: encrypted_category.id,
             name: decrypted_category, 
-            category_type: encrypted_category.category_type
+            category_type: encrypted_category.category_type,
+            meta_info: encrypted_category.meta_info
         })
     }
 
@@ -695,7 +722,8 @@ where
             id: plan.id, 
             category_id: plan.category_id, 
             name: encrypted_name.as_bytes().into(), 
-            amount_limit: encrypted_amount_limit.as_bytes().into()
+            amount_limit: encrypted_amount_limit.as_bytes().into(),
+            meta_info: plan.meta_info
         })
     }
 
@@ -707,7 +735,8 @@ where
             id: encrypted_plan.id, 
             category_id: encrypted_plan.category_id, 
             name: decrypted_name, 
-            amount_limit: decrypted_amount_limit 
+            amount_limit: decrypted_amount_limit,
+            meta_info: encrypted_plan.meta_info
         })
     }
 }

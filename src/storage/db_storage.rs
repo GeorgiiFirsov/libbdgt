@@ -1,7 +1,7 @@
 use crate::location::Location;
 use crate::error::{Result, Error};
-use crate::datetime::{Clock, Timestamp};
-use super::data::{EncryptedTransaction, EncryptedCategory, EncryptedAccount, EncryptedPlan, Id, CategoryType};
+use crate::datetime::Timestamp;
+use super::data::{EncryptedTransaction, EncryptedCategory, EncryptedAccount, EncryptedPlan, Id, CategoryType, MetaInfo};
 use super::storage::DataStorage;
 use super::{CONSISTENCY_VIOLATION, CANNOT_DELETE_PREDEFINED, CANNOT_MODIFY_PREDEFINED};
 
@@ -90,29 +90,29 @@ impl DataStorage for DbStorage {
     fn add_transaction(&self, transaction: EncryptedTransaction) -> Result<()> {
         let statement_fmt = match transaction.id {
             None => r#"
-                INSERT INTO transactions (timestamp, description, account_id, category_id, amount)
-                VALUES (?1, ?2, ?3, ?4, ?5)
+                INSERT INTO transactions (timestamp, description, account_id, category_id, amount, _creation_timestamp)
+                VALUES (?1, ?2, ?3, ?4, ?5, ?6)
             "#,
             Some(_) => r#"
-                INSERT INTO transactions (transaction_id, timestamp, description, account_id, category_id, amount)
-                VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+                INSERT INTO transactions (transaction_id, timestamp, description, account_id, category_id, amount, _creation_timestamp)
+                VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
             "#
         };
         
         match transaction.id {
             None => self.db.execute(statement_fmt, 
                 rusqlite::params![transaction.timestamp, transaction.description, transaction.account_id, 
-                    transaction.category_id, transaction.amount])?,
+                    transaction.category_id, transaction.amount, transaction.meta_info.added_timestamp])?,
                 
             Some(id) => self.db.execute(statement_fmt, 
                 rusqlite::params![id, transaction.timestamp, transaction.description, transaction.account_id, 
-                    transaction.category_id, transaction.amount])?
+                    transaction.category_id, transaction.amount, transaction.meta_info.added_timestamp])?
         };
 
         Ok(())
     }
 
-    fn remove_transaction(&self, transaction: Id) -> Result<()> {
+    fn remove_transaction(&self, transaction: Id, removal_timestamp: Timestamp) -> Result<()> {
         let statement_fmt = r#"
             UPDATE transactions
                SET _removal_timestamp = ?1
@@ -120,14 +120,14 @@ impl DataStorage for DbStorage {
         "#;
 
         self.db
-            .execute(statement_fmt, rusqlite::params![Clock::now(), transaction])?;
+            .execute(statement_fmt, rusqlite::params![removal_timestamp, transaction])?;
 
         Ok(())
     }
 
     fn transaction(&self, transaction: Id) -> Result<EncryptedTransaction> {
         let statement_fmt = r#"
-            SELECT transaction_id, timestamp, description, account_id, category_id, amount
+            SELECT transaction_id, timestamp, description, account_id, category_id, amount, _creation_timestamp, _change_timestamp, _removal_timestamp
               FROM transactions
              WHERE transaction_id = ?1 AND 
                    _removal_timestamp IS NULL
@@ -145,7 +145,7 @@ impl DataStorage for DbStorage {
 
     fn transactions(&self) -> Result<Vec<EncryptedTransaction>> {
         let statement = r#"
-            SELECT transaction_id, timestamp, description, account_id, category_id, amount
+            SELECT transaction_id, timestamp, description, account_id, category_id, amount, _creation_timestamp, _change_timestamp, _removal_timestamp
               FROM transactions
              WHERE _removal_timestamp IS NULL
              ORDER BY timestamp DESC
@@ -156,7 +156,7 @@ impl DataStorage for DbStorage {
 
     fn transactions_after(&self, start_timestamp: Timestamp) -> Result<Vec<EncryptedTransaction>> {
         let statement_fmt = r#"
-            SELECT transaction_id, timestamp, description, account_id, category_id, amount
+            SELECT transaction_id, timestamp, description, account_id, category_id, amount, _creation_timestamp, _change_timestamp, _removal_timestamp
               FROM transactions
              WHERE timestamp >= ?1 AND 
                    _removal_timestamp IS NULL
@@ -168,7 +168,7 @@ impl DataStorage for DbStorage {
 
     fn transactions_between(&self, start_timestamp: Timestamp, end_timestamp: Timestamp) -> Result<Vec<EncryptedTransaction>> {
         let statement_fmt = r#"
-            SELECT transaction_id, timestamp, description, account_id, category_id, amount
+            SELECT transaction_id, timestamp, description, account_id, category_id, amount, _creation_timestamp, _change_timestamp, _removal_timestamp
               FROM transactions
              WHERE timestamp >= ?1 AND 
                    timestamp < ?2 AND 
@@ -181,7 +181,7 @@ impl DataStorage for DbStorage {
 
     fn transactions_of(&self, account: Id) -> Result<Vec<EncryptedTransaction>> {
         let statement_fmt = r#"
-            SELECT transaction_id, timestamp, description, account_id, category_id, amount
+            SELECT transaction_id, timestamp, description, account_id, category_id, amount, _creation_timestamp, _change_timestamp, _removal_timestamp
               FROM transactions
              WHERE account_id = ?1 AND 
                    _removal_timestamp IS NULL
@@ -193,7 +193,7 @@ impl DataStorage for DbStorage {
 
     fn transactions_of_after(&self, account: Id, start_timestamp: Timestamp) -> Result<Vec<EncryptedTransaction>> {
         let statement_fmt = r#"
-            SELECT transaction_id, timestamp, description, account_id, category_id, amount
+            SELECT transaction_id, timestamp, description, account_id, category_id, amount, _creation_timestamp, _change_timestamp, _removal_timestamp
               FROM transactions
              WHERE account_id = ?1 AND
                    timestamp >= ?2 AND 
@@ -206,7 +206,7 @@ impl DataStorage for DbStorage {
 
     fn transactions_of_between(&self, account: Id, start_timestamp: Timestamp, end_timestamp: Timestamp) -> Result<Vec<EncryptedTransaction>> {
         let statement_fmt = r#"
-            SELECT transaction_id, timestamp, description, account_id, category_id, amount
+            SELECT transaction_id, timestamp, description, account_id, category_id, amount, _creation_timestamp, _change_timestamp, _removal_timestamp
               FROM transactions
              WHERE account_id = ?1 AND
                    timestamp >= ?2 AND
@@ -220,7 +220,7 @@ impl DataStorage for DbStorage {
 
     fn transactions_with(&self, category: Id) -> Result<Vec<EncryptedTransaction>> {
         let statement_fmt = r#"
-            SELECT transaction_id, timestamp, description, account_id, category_id, amount
+            SELECT transaction_id, timestamp, description, account_id, category_id, amount, _creation_timestamp, _change_timestamp, _removal_timestamp
               FROM transactions
              WHERE category_id = ?1 AND 
                    _removal_timestamp IS NULL
@@ -232,7 +232,7 @@ impl DataStorage for DbStorage {
 
     fn transactions_with_after(&self, category: Id, start_timestamp: Timestamp) -> Result<Vec<EncryptedTransaction>> {
         let statement_fmt = r#"
-            SELECT transaction_id, timestamp, description, account_id, category_id, amount
+            SELECT transaction_id, timestamp, description, account_id, category_id, amount, _creation_timestamp, _change_timestamp, _removal_timestamp
               FROM transactions
              WHERE category_id = ?1 AND
                    timestamp >= ?2 AND 
@@ -245,7 +245,7 @@ impl DataStorage for DbStorage {
 
     fn transactions_with_between(&self, category: Id, start_timestamp: Timestamp, end_timestamp: Timestamp) -> Result<Vec<EncryptedTransaction>> {
         let statement_fmt = r#"
-            SELECT transaction_id, timestamp, description, account_id, category_id, amount
+            SELECT transaction_id, timestamp, description, account_id, category_id, amount, _creation_timestamp, _change_timestamp, _removal_timestamp
               FROM transactions
              WHERE category_id = ?1 AND
                    timestamp >= ?2 AND
@@ -260,21 +260,21 @@ impl DataStorage for DbStorage {
     fn add_account(&self, account: EncryptedAccount) -> Result<()> {
         let statement_fmt = match account.id {
             None => r#"
-                INSERT INTO accounts (name, balance)
-                VALUES (?1, ?2)
+                INSERT INTO accounts (name, balance, _creation_timestamp)
+                VALUES (?1, ?2, ?3)
             "#,
             Some(_) => r#"
-                INSERT INTO accounts (account_id, name, balance)
-                VALUES (?1, ?2, ?3)
+                INSERT INTO accounts (account_id, name, balance, _creation_timestamp)
+                VALUES (?1, ?2, ?3, ?4)
             "#
         };
 
         match account.id {
-            None => self.db.execute(statement_fmt, 
-                rusqlite::params![account.name, account.balance])?,
+            None => self.db.execute(statement_fmt, rusqlite::params![account.name, 
+                account.balance, account.meta_info.added_timestamp])?,
 
-            Some(id) => self.db.execute(statement_fmt,
-                rusqlite::params![id, account.name, account.balance])?
+            Some(id) => self.db.execute(statement_fmt, rusqlite::params![id, account.name, 
+                account.balance, account.meta_info.added_timestamp])?
         };
 
         Ok(())
@@ -284,35 +284,19 @@ impl DataStorage for DbStorage {
         let statement_fmt = r#"
             UPDATE accounts
                SET name = ?1,
-                   balance = ?2, 
-                   _change_timestamp = ?3
-             WHERE account_id = ?4 AND 
+                   balance = ?2
+             WHERE account_id = ?3 AND 
                    _removal_timestamp IS NULL
         "#;
 
         self.db
-            .execute(statement_fmt, rusqlite::params![account.name, account.balance, Clock::now(), account.id])?;
+            .execute(statement_fmt, rusqlite::params![account.name, 
+                account.balance, account.id])?;
 
         Ok(())
     }
 
-    fn remove_account(&self, account: Id, force: bool) -> Result<()> {
-        if force {
-            //
-            // Forced removal is requested, hence I need to remove
-            // all transactions first
-            //
-
-            let statement_fmt = r#"
-                UPDATE transactions
-                   SET _removal_timestamp = ?1
-                 WHERE account_id = ?2
-            "#;
-
-            self.db
-                .execute(statement_fmt, rusqlite::params![Clock::now(), account])?;
-        }
-
+    fn remove_account(&self, account: Id, removal_timestamp: Timestamp) -> Result<()> {
         //
         // Check if we can delete account: no transaction should belong to it.
         // Only after that I can remove account
@@ -327,14 +311,14 @@ impl DataStorage for DbStorage {
         "#;
 
         self.db
-            .execute(statement_fmt, rusqlite::params![Clock::now(), account])?;
+            .execute(statement_fmt, rusqlite::params![removal_timestamp, account])?;
 
         Ok(())
     }
 
     fn account(&self, account: Id) -> Result<EncryptedAccount> {
         let statement_fmt = r#"
-            SELECT account_id, name, balance
+            SELECT account_id, name, balance, _creation_timestamp, _change_timestamp, _removal_timestamp
               FROM accounts
              WHERE account_id = ?1 AND 
                    _removal_timestamp IS NULL
@@ -352,7 +336,7 @@ impl DataStorage for DbStorage {
 
     fn accounts(&self) -> Result<Vec<EncryptedAccount>> {
         let statement = r#"
-            SELECT account_id, name, balance
+            SELECT account_id, name, balance, _creation_timestamp, _change_timestamp, _removal_timestamp
               FROM accounts
              WHERE _removal_timestamp IS NULL
         "#;
@@ -363,22 +347,22 @@ impl DataStorage for DbStorage {
     fn add_category(&self, category: EncryptedCategory) -> Result<()> {
         let statement_fmt = match category.id {
             None => r#"
-                    INSERT INTO categories (name, type)
-                    VALUES (?1, ?2)
+                    INSERT INTO categories (name, type, _creation_timestamp)
+                    VALUES (?1, ?2, ?3)
                 "#,
 
             Some(_) => r#"
-                    INSERT INTO categories (category_id, name, type)
-                    VALUES (?1, ?2, ?3)
+                    INSERT INTO categories (category_id, name, type, _creation_timestamp)
+                    VALUES (?1, ?2, ?3, ?4)
                 "#
         };
 
         match category.id {
-            None => self.db.execute(statement_fmt, 
-                rusqlite::params![category.name, category.category_type])?,
+            None => self.db.execute(statement_fmt, rusqlite::params![category.name, 
+                category.category_type, category.meta_info.added_timestamp])?,
 
-            Some(id) => self.db.execute(statement_fmt, 
-                rusqlite::params![id, category.name, category.category_type])?
+            Some(id) => self.db.execute(statement_fmt, rusqlite::params![id, category.name, 
+                category.category_type, category.meta_info.added_timestamp])?
         };
 
         Ok(())
@@ -392,19 +376,19 @@ impl DataStorage for DbStorage {
         let statement_fmt = r#"
             UPDATE categories
                SET name = ?1,
-                   type = ?2, 
-                   _change_timestamp = ?3
-             WHERE category_id = ?4 AND 
+                   type = ?2
+             WHERE category_id = ?3 AND 
                    _removal_timestamp IS NULL
         "#;
 
         self.db
-            .execute(statement_fmt, rusqlite::params![category.name, category.category_type, Clock::now(), category.id])?;
+            .execute(statement_fmt, rusqlite::params![category.name, 
+                category.category_type, category.id])?;
 
         Ok(())
     }
 
-    fn remove_category(&self, category: Id) -> Result<()> {
+    fn remove_category(&self, category: Id, removal_timestamp: Timestamp) -> Result<()> {
         //
         // Check if no transactions and plans reference this category
         //
@@ -423,14 +407,14 @@ impl DataStorage for DbStorage {
         "#;
 
         self.db
-            .execute(statement_fmt, rusqlite::params![Clock::now(), category])?;
+            .execute(statement_fmt, rusqlite::params![removal_timestamp, category])?;
 
         Ok(())
     }
 
     fn category(&self, category: Id) -> Result<EncryptedCategory> {
         let statement_fmt = r#"
-            SELECT category_id, name, type 
+            SELECT category_id, name, type, _creation_timestamp, _change_timestamp, _removal_timestamp
               FROM categories
              WHERE category_id = ?1 AND 
                    _removal_timestamp IS NULL
@@ -448,7 +432,7 @@ impl DataStorage for DbStorage {
 
     fn categories(&self) -> Result<Vec<EncryptedCategory>> {
         let statement = r#"
-            SELECT category_id, name, type 
+            SELECT category_id, name, type, _creation_timestamp, _change_timestamp, _removal_timestamp
               FROM categories
              WHERE _removal_timestamp IS NULL
              ORDER BY type
@@ -459,7 +443,7 @@ impl DataStorage for DbStorage {
 
     fn categories_of(&self, category_type: CategoryType) -> Result<Vec<EncryptedCategory>> {
         let statement_fmt = r#"
-            SELECT category_id, name, type 
+            SELECT category_id, name, type, _creation_timestamp, _change_timestamp, _removal_timestamp
               FROM categories
              WHERE type = ?1 AND 
                    _removal_timestamp IS NULL
@@ -472,21 +456,21 @@ impl DataStorage for DbStorage {
     fn add_plan(&self, plan: EncryptedPlan) -> Result<()> {
         let statement_fmt = match plan.id {
             None => r#"
-                INSERT INTO plans (category_id, name, amount_limit)
-                VALUES (?1, ?2, ?3)
+                INSERT INTO plans (category_id, name, amount_limit, _creation_timestamp)
+                VALUES (?1, ?2, ?3, ?4)
             "#,
             Some(_) => r#"
-                INSERT INTO plans (plan_id, category_id, name, amount_limit)
-                VALUES (?1, ?2, ?3, ?4)
+                INSERT INTO plans (plan_id, category_id, name, amount_limit, _creation_timestamp)
+                VALUES (?1, ?2, ?3, ?4, ?5)
             "#
         };
 
         match plan.id {
-            None => self.db.execute(statement_fmt, 
-                rusqlite::params![plan.category_id, plan.name, plan.amount_limit])?,
+            None => self.db.execute(statement_fmt, rusqlite::params![plan.category_id, 
+                plan.name, plan.amount_limit, plan.meta_info.added_timestamp])?,
 
-            Some(id) => self.db.execute(statement_fmt,
-                rusqlite::params![id, plan.category_id, plan.name, plan.amount_limit])?
+            Some(id) => self.db.execute(statement_fmt, rusqlite::params![id, plan.category_id, 
+                plan.name, plan.amount_limit, plan.meta_info.added_timestamp])?
         };
 
         Ok(())
@@ -497,20 +481,19 @@ impl DataStorage for DbStorage {
             UPDATE plans
                SET category_id = ?1,
                    name = ?2,
-                   amount_limit = ?3, 
-                   _change_timestamp = ?4
-             WHERE plan_id = ?5 AND 
+                   amount_limit = ?3
+             WHERE plan_id = ?4 AND 
                    _removal_timestamp IS NULL
         "#;
 
         self.db
             .execute(statement_fmt, rusqlite::params![plan.category_id, 
-                plan.name, plan.amount_limit, Clock::now(), plan.id])?;
+                plan.name, plan.amount_limit, plan.id])?;
 
         Ok(())
     }
 
-    fn remove_plan(&self, plan: Id) -> Result<()> {
+    fn remove_plan(&self, plan: Id, removal_timestamp: Timestamp) -> Result<()> {
         let statement_fmt = r#"
             UPDATE plans
                SET _removal_timestamp = ?1
@@ -518,14 +501,14 @@ impl DataStorage for DbStorage {
         "#;
 
         self.db
-            .execute(statement_fmt, rusqlite::params![Clock::now(), plan])?;
+            .execute(statement_fmt, rusqlite::params![removal_timestamp, plan])?;
 
         Ok(())
     }
 
     fn plan(&self, plan: Id) -> Result<EncryptedPlan> {
         let statement_fmt = r#"
-            SELECT plan_id, category_id, name, amount_limit 
+            SELECT plan_id, category_id, name, amount_limit, _creation_timestamp, _change_timestamp, _removal_timestamp
               FROM plans
              WHERE plan_id = ?1 AND 
                    _removal_timestamp IS NULL
@@ -543,7 +526,7 @@ impl DataStorage for DbStorage {
 
     fn plans(&self) -> Result<Vec<EncryptedPlan>> {
         let statement = r#"
-            SELECT plan_id, category_id, name, amount_limit 
+            SELECT plan_id, category_id, name, amount_limit, _creation_timestamp, _change_timestamp, _removal_timestamp
               FROM plans
              WHERE _removal_timestamp IS NULL
              ORDER BY category_id
@@ -554,7 +537,7 @@ impl DataStorage for DbStorage {
 
     fn plans_for(&self, category: Id) -> Result<Vec<EncryptedPlan>> {
         let statement_fmt = r#"
-            SELECT plan_id, category_id, name, amount_limit 
+            SELECT plan_id, category_id, name, amount_limit, _creation_timestamp, _change_timestamp, _removal_timestamp
               FROM plans
              WHERE category_id = ?1 AND 
                    _removal_timestamp IS NULL
@@ -606,7 +589,7 @@ impl DbStorage {
                 account_id          BLOB        PRIMARY KEY DEFAULT (randomblob(16)),
                 balance             BYTEA       NOT NULL,
                 name                BYTEA       NOT NULL,
-                _creation_timestamp DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                _creation_timestamp DATETIME    NOT NULL,
                 _change_timestamp   DATETIME    NULL,
                 _removal_timestamp  DATETIME    NULL
             ) WITHOUT ROWID;
@@ -624,7 +607,7 @@ impl DbStorage {
                 category_id         BLOB        PRIMARY KEY DEFAULT (randomblob(16)),
                 name                BYTEA       NOT NULL,
                 type                TINYINT     NOT NULL,
-                _creation_timestamp DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                _creation_timestamp DATETIME    NOT NULL,
                 _change_timestamp   DATETIME    NULL,
                 _removal_timestamp  DATETIME    NULL
             ) WITHOUT ROWID;
@@ -648,7 +631,7 @@ impl DbStorage {
                 account_id          BLOB        REFERENCES accounts(account_id),
                 category_id         BLOB        REFERENCES categories(category_id),
                 amount              BYTEA       NOT NULL,
-                _creation_timestamp DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                _creation_timestamp DATETIME    NOT NULL,
                 _change_timestamp   DATETIME    NULL,
                 _removal_timestamp  DATETIME    NULL
             ) WITHOUT ROWID;
@@ -670,7 +653,7 @@ impl DbStorage {
                 category_id         BLOB        REFERENCES categories(category_id),
                 name                BYTEA       NOT NULL,
                 amount_limit        BYTEA       NOT NULL,
-                _creation_timestamp DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                _creation_timestamp DATETIME    NOT NULL,
                 _change_timestamp   DATETIME    NULL,
                 _removal_timestamp  DATETIME    NULL
             ) WITHOUT ROWID;
@@ -753,38 +736,66 @@ impl DbStorage {
 
 impl DbStorage {
     fn category_from_row(row: &rusqlite::Row<'_>) -> Result<EncryptedCategory> {
+        let meta_info = MetaInfo {
+            added_timestamp: row.get(3)?,
+            changed_timestamp: row.get(4)?,
+            removed_timestamp: row.get(5)?
+        };
+
         Ok(EncryptedCategory { 
             id: row.get(0)?, 
             name: row.get(1)?, 
-            category_type: row.get(2)?
+            category_type: row.get(2)?,
+            meta_info: meta_info
         })
     }
 
     fn account_from_row(row: &rusqlite::Row<'_>) -> Result<EncryptedAccount> {
+        let meta_info = MetaInfo {
+            added_timestamp: row.get(3)?,
+            changed_timestamp: row.get(4)?,
+            removed_timestamp: row.get(5)?
+        };
+
         Ok(EncryptedAccount { 
             id: row.get(0)?, 
             name: row.get(1)?, 
-            balance: row.get(2)? 
+            balance: row.get(2)?,
+            meta_info: meta_info
         })
     }
 
     fn transaction_from_row(row: &rusqlite::Row<'_>) -> Result<EncryptedTransaction> {
+        let meta_info = MetaInfo {
+            added_timestamp: row.get(6)?,
+            changed_timestamp: row.get(7)?,
+            removed_timestamp: row.get(8)?
+        };
+
         Ok(EncryptedTransaction { 
             id: row.get(0)?, 
             timestamp: row.get(1)?, 
             description: row.get(2)?, 
             account_id: row.get(3)?, 
             category_id: row.get(4)?, 
-            amount: row.get(5)? 
+            amount: row.get(5)?,
+            meta_info: meta_info
         })
     }
 
     fn plan_from_row(row: &rusqlite::Row<'_>) -> Result<EncryptedPlan> {
+        let meta_info = MetaInfo {
+            added_timestamp: row.get(4)?,
+            changed_timestamp: row.get(5)?,
+            removed_timestamp: row.get(6)?
+        };
+
         Ok(EncryptedPlan {
             id: row.get(0)?,
             category_id: row.get(1)?,
             name: row.get(2)?,
-            amount_limit: row.get(3)?
+            amount_limit: row.get(3)?,
+            meta_info: meta_info
         })
     }
 }

@@ -1,6 +1,6 @@
 use crate::location::Location;
 use crate::error::{Result, Error};
-use crate::datetime::{Clock, Timestamp};
+use crate::datetime::{Clock, Timestamp, FIRST_AFTER_JANUARY_1970};
 use super::engine::SyncEngine;
 use super::syncable::Syncable;
 use super::{REMOTE_ALREADY_EXIST, MALFORMED_LAST_SYNC_TIMESTAMP, REMOTE_CONFLICT};
@@ -85,14 +85,15 @@ impl GitSyncEngine {
 
         //
         // Create last sync file
+        // I write first nonzero timestamp after January 1970 to
+        // ensure, that all predefined items will not by
+        // synced between instances
         //
 
         let last_sync_path = Self::sync_last_sync_path(loc);
-        let january_1970 = Timestamp::from_timestamp(0, 0)
-            .expect("Zero is a valid timestamp");
-
         let mut file = std::fs::File::create(last_sync_path)?;
-        Self::write_last_sync(&mut file, &january_1970)?;
+
+        Self::write_last_sync(&mut file, &FIRST_AFTER_JANUARY_1970)?;
 
         //
         // Now I can just open repository and build engine
