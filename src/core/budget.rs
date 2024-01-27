@@ -126,7 +126,10 @@ where
         //
         // Amount is considered to have a proper sign,
         // so I just add it to a corresponding account's
-        // balance
+        // balance.
+        // Change timestamp for account should not be 
+        // modified in this case, so I don't modify it 
+        // in account instance.
         //
 
         let mut decrypted_account = self.decrypt_account(
