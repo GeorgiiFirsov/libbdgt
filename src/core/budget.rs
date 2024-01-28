@@ -104,14 +104,14 @@ where
         // Predefined items creation timestamp is always equal to January 1970
         //
 
-        self.add_category(Category { 
+        self.add_category(&Category { 
             id: Some(St::TRANSFER_INCOME_ID), 
             name: TRANSFER_INCOME_CAT_NAME.to_owned(), 
             category_type: CategoryType::Income,
             meta_info: MetaInfo::new(Some(*JANUARY_1970), None, None)
         })?;
 
-        self.add_category(Category { 
+        self.add_category(&Category { 
             id: Some(St::TRANSFER_OUTCOME_ID), 
             name: TRANSFER_OUTCOME_CAT_NAME.to_owned(),
             category_type: CategoryType::Outcome,
@@ -122,7 +122,7 @@ where
     /// Add a new transaction.
     /// 
     /// * `transaction` - transaction data
-    pub fn add_transaction(&self, transaction: Transaction) -> Result<()> {
+    pub fn add_transaction(&self, transaction: &Transaction) -> Result<()> {
         //
         // Amount is considered to have a proper sign,
         // so I just add it to a corresponding account's
@@ -146,7 +146,7 @@ where
         // Hence there is a way to restore consistency.
         //
 
-        self.storage.add_transaction(self.encrypt_transaction(&transaction)?)?;
+        self.storage.add_transaction(self.encrypt_transaction(transaction)?)?;
         self.storage.update_account(self.encrypt_account(&decrypted_account)?)?;
 
         Ok(())
@@ -161,7 +161,7 @@ where
         let amount = amount.abs();
         let timestamp = Clock::now();
 
-        self.add_transaction(Transaction{
+        self.add_transaction(&Transaction{
             id: None,
             timestamp: timestamp,
             description: TRANSFER_INCOME_DESCRIPTION.to_owned(),
@@ -171,7 +171,7 @@ where
             meta_info: MetaInfo::new(Some(timestamp), None, None)
         })?;
 
-        self.add_transaction(Transaction{
+        self.add_transaction(&Transaction{
             id: None,
             timestamp: timestamp,
             description: TRANSFER_OUTCOME_DESCRIPTION.to_owned(),
@@ -309,8 +309,8 @@ where
     /// Add a new account.
     /// 
     /// * `account` - account data
-    pub fn add_account(&self, account: Account) -> Result<()> {
-        self.storage.add_account(self.encrypt_account(&account)?)
+    pub fn add_account(&self, account: &Account) -> Result<()> {
+        self.storage.add_account(self.encrypt_account(account)?)
     }
 
     /// Remove an account if possible (or forced).
@@ -355,8 +355,8 @@ where
     /// Add a new category.
     /// 
     /// * `category` - category data
-    pub fn add_category(&self, category: Category) -> Result<()> {
-        self.storage.add_category(self.encrypt_category(&category)?)
+    pub fn add_category(&self, category: &Category) -> Result<()> {
+        self.storage.add_category(self.encrypt_category(category)?)
     }
 
     /// Remove category if possible.
@@ -402,8 +402,8 @@ where
     /// Add a new plan.
     /// 
     /// * `plan` - plan data
-    pub fn add_plan(&self, plan: Plan) -> Result<()> {
-        self.storage.add_plan(self.encrypt_plan(&plan)?)
+    pub fn add_plan(&self, plan: &Plan) -> Result<()> {
+        self.storage.add_plan(self.encrypt_plan(plan)?)
     }
 
     /// Remove plan.
@@ -598,6 +598,34 @@ where
     }
 
     fn merge_changes(&self, _changelog: &Changelog) -> Result<()> {
+        //
+        // Merge is performed in the following order:
+        //  1. Add accounts
+        //  2. Add categories
+        //  3. Add plans
+        //  4. Add transactions
+        //  5. Change transactions
+        //  6. Change plans
+        //  7. Change categories
+        //  8. Change accounts
+        //  9. Remove transactions
+        // 10. Remove plans
+        // 11. Remove categories
+        // 12. Remove accounts
+        //
+
+        todo!("Perform merge steps")
+    }
+
+    fn merge_step<T, I, Mo>(&self, items: I, merge_operation: Mo) -> Result<()>
+    where
+        I: IntoIterator<Item = T>,
+        Mo: Fn(T) -> Result<()>
+    {
+        for item in items {
+            merge_operation(item)?;
+        }
+
         Ok(())
     }
 }
