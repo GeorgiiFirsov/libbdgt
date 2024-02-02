@@ -597,24 +597,60 @@ where
         todo!("export changelog")
     }
 
-    fn merge_changes(&self, _changelog: &Changelog) -> Result<()> {
+    fn merge_changes(&self, changelog: &Changelog) -> Result<()> {
         //
-        // Merge is performed in the following order:
-        //  1. Add accounts
-        //  2. Add categories
-        //  3. Add plans
-        //  4. Add transactions
-        //  5. Change transactions
-        //  6. Change plans
-        //  7. Change categories
-        //  8. Change accounts
-        //  9. Remove transactions
-        // 10. Remove plans
-        // 11. Remove categories
-        // 12. Remove accounts
+        // First, added items are processed in the following order:
+        //  1. Accounts
+        //  2. Categories
+        //  3. Plans
+        //  4. Transactions
         //
 
-        todo!("Perform merge steps")
+        self.merge_step(&changelog.accounts.added, |account| {
+            self.add_account(account)
+        })?;
+
+        self.merge_step(&changelog.categories.added, |category| {
+            self.add_category(category)
+        })?;
+
+        self.merge_step(&changelog.plans.added, |plan| {
+            self.add_plan(plan)
+        })?;
+
+        self.merge_step(&changelog.transactions.added, |transaction| {
+            self.add_transaction(transaction)
+        })?;
+
+        //
+        // Then, changed items are processed in the reverse order
+        //
+
+        // For now, no changes can be made, therefore, nothing is processed
+
+        //
+        // Finally, removed items are processed in the reverse order too
+        //
+
+        self.merge_step(&changelog.transactions.removed, |transaction| {
+            self.remove_transaction(transaction.id.unwrap(), false,
+                transaction.meta_info.removed_timestamp.unwrap())
+        })?;
+
+        self.merge_step(&changelog.plans.removed, |plan| {
+            self.remove_plan(plan.id.unwrap(), plan.meta_info.removed_timestamp.unwrap())
+        })?;
+
+        self.merge_step(&changelog.categories.removed, |category| {
+            self.remove_category(category.id.unwrap(), category.meta_info.removed_timestamp.unwrap())
+        })?;
+
+        self.merge_step(&changelog.accounts.removed, |account| {
+            self.remove_account(account.id.unwrap(), false,
+                account.meta_info.removed_timestamp.unwrap())
+        })?;
+
+        Ok(())
     }
 
     fn merge_step<T, I, Mo>(&self, items: I, merge_operation: Mo) -> Result<()>
