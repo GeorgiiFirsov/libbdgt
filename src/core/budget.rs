@@ -510,7 +510,7 @@ where
         let remote_changelog = self.crypto_engine
             .decrypt_symmetric(decryption_key.as_bytes(), &remote_changelog)?;
 
-        let mut cumulative_changelog = Changelog::new(remote_changelog.as_bytes())?;
+        let mut cumulative_changelog = Changelog::from_slice(remote_changelog.as_bytes())?;
 
         //
         // Merge remote and export local changes
@@ -537,7 +537,7 @@ where
             self.crypto_engine.symmetric_key_length())?;
 
         let cumulative_changelog = self.crypto_engine
-            .encrypt_symmetric(encryption_key.as_bytes(), &cumulative_changelog.as_bytes()?)?;
+            .encrypt_symmetric(encryption_key.as_bytes(), &cumulative_changelog.to_vec()?)?;
 
         changelog_rw.write_all(cumulative_changelog.as_bytes())?;
 

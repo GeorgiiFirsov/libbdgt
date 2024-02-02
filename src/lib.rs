@@ -12,6 +12,8 @@ extern crate chrono;
 extern crate typenum;
 extern crate aes_gcm;
 extern crate rusqlite;
+extern crate lazy_static;
+extern crate flexbuffers;
 
 //
 // Public modules

@@ -18,6 +18,17 @@ pub(crate) struct SimpleChangelog<T> {
 }
 
 
+impl<T> SimpleChangelog<T> {
+    fn new() -> Self {
+        SimpleChangelog::<T> {
+            added: Vec::new(),
+            changed: Vec::new(),
+            removed: Vec::new()
+        }
+    }
+}
+
+
 /// Database changelog representation.
 #[derive(Serialize, Deserialize)]
 pub(crate) struct Changelog {
@@ -39,8 +50,8 @@ impl Changelog {
     /// Creates a new changelog object from binary representation.
     /// 
     /// * `binary_changelog` - binary changelog representation
-    pub(crate) fn new(binary_changelog: &[u8]) -> Result<Self> {
-        rmp_serde::from_read(binary_changelog)
+    pub(crate) fn from_slice(binary_changelog: &[u8]) -> Result<Self> {
+        flexbuffers::from_slice(binary_changelog)
             .map_err(Error::from)
     }
 
@@ -68,8 +79,8 @@ impl Changelog {
     }
 
     /// Converts current changelog into a binary representation.
-    pub(crate) fn as_bytes(&self) -> Result<Vec<u8>> {
-        rmp_serde::to_vec(self)
+    pub(crate) fn to_vec(&self) -> Result<Vec<u8>> {
+        flexbuffers::to_vec(self)
             .map_err(Error::from)
     }
 }

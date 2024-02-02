@@ -10,7 +10,7 @@ license = "GPL-3.0-only"
 
 [dependencies]
 lazy_static = "1.4.0"
-rmp-serde = "1.1.2"
+flexbuffers = "2.0.0"
 aes-gcm = "0.10.3"
 typenum = "1.17.0"
 gpgme = "0.11.0"
