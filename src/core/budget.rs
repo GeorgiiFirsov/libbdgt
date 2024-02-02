@@ -608,7 +608,15 @@ where
         //
 
         self.merge_step(&changelog.accounts.added, |account| {
-            self.add_account(account)
+            //
+            // Explicitly set account's balance to its initial value, because
+            // they may differ in synced account. It could lead to inconsistency.
+            //
+
+            let mut account = account.clone();
+            account.balance = account.initial_balance;
+
+            self.add_account(&account)
         })?;
 
         self.merge_step(&changelog.categories.added, |category| {
@@ -739,11 +747,13 @@ where
     fn encrypt_account(&self, account: &Account) -> Result<EncryptedAccount> {
         let encrypted_name = self.encrypt_string(&account.name)?;
         let encrypted_balance = self.encrypt_isize(&account.balance)?;
+        let encrypted_initial_balance = self.encrypt_isize(&account.initial_balance)?;
 
         Ok(EncryptedAccount { 
             id: account.id,
             name: encrypted_name.as_bytes().into(), 
             balance: encrypted_balance.as_bytes().into(),
+            initial_balance: encrypted_initial_balance.as_bytes().into(),
             meta_info: account.meta_info
         })
     }
@@ -751,11 +761,13 @@ where
     fn decrypt_account(&self, encrypted_account: &EncryptedAccount) -> Result<Account> {
         let decrypted_name = self.decrypt_string(&encrypted_account.name)?;
         let decrypted_balance = self.decrypt_isize(&encrypted_account.balance)?;
+        let decrypted_initial_balance = self.decrypt_isize(&encrypted_account.initial_balance)?;
 
         Ok(Account { 
             id: encrypted_account.id,
             name: decrypted_name, 
             balance: decrypted_balance,
+            initial_balance: decrypted_initial_balance,
             meta_info: encrypted_account.meta_info
         })
     }

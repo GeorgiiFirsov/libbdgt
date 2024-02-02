@@ -133,7 +133,7 @@ pub struct EncryptedCategory {
 
 
 /// User-friendly account structure.
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Account {
     /// Identifier
     pub id: PrimaryId,
@@ -143,6 +143,9 @@ pub struct Account {
 
     /// Current account balance
     pub balance: isize,
+
+    /// Initial account balance
+    pub initial_balance: isize,
 
     /// Meta info
     pub meta_info: MetaInfo
@@ -157,6 +160,7 @@ pub struct EncryptedAccount {
     pub id: PrimaryId,
     pub name: Vec<u8>,
     pub balance: Vec<u8>,
+    pub initial_balance: Vec<u8>,
     pub meta_info: MetaInfo
 }
 

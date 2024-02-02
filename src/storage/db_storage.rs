@@ -240,21 +240,21 @@ impl DataStorage for DbStorage {
     fn add_account(&self, account: EncryptedAccount) -> Result<()> {
         let statement_fmt = match account.id {
             None => r#"
-                INSERT INTO accounts (name, balance, _creation_timestamp)
+                INSERT INTO accounts (name, balance, initial_balance, _creation_timestamp)
                 VALUES (?1, ?2, ?3)
             "#,
             Some(_) => r#"
-                INSERT INTO accounts (account_id, name, balance, _creation_timestamp)
+                INSERT INTO accounts (account_id, name, balance, initial_balance, _creation_timestamp)
                 VALUES (?1, ?2, ?3, ?4)
             "#
         };
 
         match account.id {
             None => self.db.execute(statement_fmt, rusqlite::params![account.name, 
-                account.balance, account.meta_info.added_timestamp])?,
+                account.balance, account.initial_balance, account.meta_info.added_timestamp])?,
 
             Some(id) => self.db.execute(statement_fmt, rusqlite::params![id, account.name, 
-                account.balance, account.meta_info.added_timestamp])?
+                account.balance, account.initial_balance, account.meta_info.added_timestamp])?
         };
 
         Ok(())
@@ -552,6 +552,7 @@ impl DbStorage {
             CREATE TABLE accounts (
                 account_id          BLOB        PRIMARY KEY DEFAULT (randomblob(16)),
                 balance             BYTEA       NOT NULL,
+                initial_balance     BYTEA       NOT NULL,
                 name                BYTEA       NOT NULL,
                 _creation_timestamp DATETIME    NOT NULL,
                 _change_timestamp   DATETIME    NULL,
@@ -717,7 +718,7 @@ impl DbStorage {
             .map_or(String::new(), S::into);
 
         return format!(r#"
-            SELECT account_id, name, balance, _creation_timestamp, _change_timestamp, _removal_timestamp
+            SELECT account_id, name, balance, initial_balance, _creation_timestamp, _change_timestamp, _removal_timestamp
               FROM accounts
                 {}
         "#, modifiers);
@@ -765,15 +766,16 @@ impl DbStorage {
 
     fn account_from_row(row: &rusqlite::Row<'_>) -> Result<EncryptedAccount> {
         let meta_info = MetaInfo {
-            added_timestamp: row.get(3)?,
-            changed_timestamp: row.get(4)?,
-            removed_timestamp: row.get(5)?
+            added_timestamp: row.get(4)?,
+            changed_timestamp: row.get(5)?,
+            removed_timestamp: row.get(6)?
         };
 
         Ok(EncryptedAccount { 
             id: row.get(0)?, 
             name: row.get(1)?, 
             balance: row.get(2)?,
+            initial_balance: row.get(3)?,
             meta_info: meta_info
         })
     }
