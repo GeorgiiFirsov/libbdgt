@@ -8,7 +8,7 @@ use crate::datetime::{Clock, Timestamp, JANUARY_1970};
 use crate::storage::{EncryptedTransaction, EncryptedAccount, EncryptedCategory, EncryptedPlan, MetaInfo};
 use crate::storage::{DataStorage, Id, Transaction, Account, Category, Plan, CategoryType};
 use super::config::{Config, InstanceId};
-use super::changelog::{Changelog, SimpleChangelog};
+use super::changelog::Changelog;
 use super::MALFORMED_TIMESTAMP;
 
 
@@ -594,6 +594,7 @@ where
     }
 
     fn export_local_changes(&self, _base: &Timestamp) -> Result<Changelog> {
+        let mut _local_changelog = Changelog::new();
         todo!("export changelog")
     }
 

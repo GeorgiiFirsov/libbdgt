@@ -47,6 +47,16 @@ pub(crate) struct Changelog {
 
 
 impl Changelog {
+    /// Creates an empty changelog.
+    pub(crate) fn new() -> Self {
+        Changelog {
+            accounts: SimpleChangelog::new(),
+            categories: SimpleChangelog::new(),
+            transactions: SimpleChangelog::new(),
+            plans: SimpleChangelog::new()
+        }
+    }
+
     /// Creates a new changelog object from binary representation.
     /// 
     /// * `binary_changelog` - binary changelog representation
