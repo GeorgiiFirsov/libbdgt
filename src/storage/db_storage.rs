@@ -126,12 +126,10 @@ impl DataStorage for DbStorage {
     }
 
     fn transaction(&self, transaction: Id) -> Result<EncryptedTransaction> {
-        let statement_fmt = r#"
-            SELECT transaction_id, timestamp, description, account_id, category_id, amount, _creation_timestamp, _change_timestamp, _removal_timestamp
-              FROM transactions
-             WHERE transaction_id = ?1 AND 
-                   _removal_timestamp IS NULL
-        "#;
+        let statement_fmt = Self::select_from_transactions(Some(r#"
+            WHERE transaction_id = ?1 AND 
+                  _removal_timestamp IS NULL
+        "#));
 
         let mut result = self.query_with_params(statement_fmt, 
             rusqlite::params![transaction], Self::transaction_from_row)?;
@@ -144,115 +142,97 @@ impl DataStorage for DbStorage {
     }
 
     fn transactions(&self) -> Result<Vec<EncryptedTransaction>> {
-        let statement = r#"
-            SELECT transaction_id, timestamp, description, account_id, category_id, amount, _creation_timestamp, _change_timestamp, _removal_timestamp
-              FROM transactions
-             WHERE _removal_timestamp IS NULL
-             ORDER BY timestamp DESC
-        "#;
+        let statement = Self::select_from_transactions(Some(r#"
+            WHERE _removal_timestamp IS NULL
+            ORDER BY timestamp DESC
+        "#));
 
         self.query(statement, Self::transaction_from_row)
     }
 
     fn transactions_after(&self, start_timestamp: Timestamp) -> Result<Vec<EncryptedTransaction>> {
-        let statement_fmt = r#"
-            SELECT transaction_id, timestamp, description, account_id, category_id, amount, _creation_timestamp, _change_timestamp, _removal_timestamp
-              FROM transactions
-             WHERE timestamp >= ?1 AND 
-                   _removal_timestamp IS NULL
-             ORDER BY timestamp DESC
-        "#;
+        let statement_fmt = Self::select_from_transactions(Some(r#"
+            WHERE timestamp >= ?1 AND 
+                  _removal_timestamp IS NULL
+            ORDER BY timestamp DESC
+        "#));
 
         self.query_with_params(statement_fmt, rusqlite::params![start_timestamp], Self::transaction_from_row)
     }
 
     fn transactions_between(&self, start_timestamp: Timestamp, end_timestamp: Timestamp) -> Result<Vec<EncryptedTransaction>> {
-        let statement_fmt = r#"
-            SELECT transaction_id, timestamp, description, account_id, category_id, amount, _creation_timestamp, _change_timestamp, _removal_timestamp
-              FROM transactions
-             WHERE timestamp >= ?1 AND 
-                   timestamp < ?2 AND 
-                   _removal_timestamp IS NULL
-             ORDER BY timestamp DESC
-        "#;
+        let statement_fmt = Self::select_from_transactions(Some(r#"
+            WHERE timestamp >= ?1 AND 
+                  timestamp < ?2 AND 
+                  _removal_timestamp IS NULL
+            ORDER BY timestamp DESC
+        "#));
 
         self.query_with_params(statement_fmt, rusqlite::params![start_timestamp, end_timestamp], Self::transaction_from_row)
     }
 
     fn transactions_of(&self, account: Id) -> Result<Vec<EncryptedTransaction>> {
-        let statement_fmt = r#"
-            SELECT transaction_id, timestamp, description, account_id, category_id, amount, _creation_timestamp, _change_timestamp, _removal_timestamp
-              FROM transactions
-             WHERE account_id = ?1 AND 
-                   _removal_timestamp IS NULL
-             ORDER BY timestamp DESC
-        "#;
+        let statement_fmt = Self::select_from_transactions(Some(r#"
+            WHERE account_id = ?1 AND 
+                  _removal_timestamp IS NULL
+            ORDER BY timestamp DESC
+        "#));
 
         self.query_with_params(statement_fmt, rusqlite::params![account], Self::transaction_from_row)
     }
 
     fn transactions_of_after(&self, account: Id, start_timestamp: Timestamp) -> Result<Vec<EncryptedTransaction>> {
-        let statement_fmt = r#"
-            SELECT transaction_id, timestamp, description, account_id, category_id, amount, _creation_timestamp, _change_timestamp, _removal_timestamp
-              FROM transactions
-             WHERE account_id = ?1 AND
-                   timestamp >= ?2 AND 
-                   _removal_timestamp IS NULL
-             ORDER BY timestamp DESC
-        "#;
+        let statement_fmt = Self::select_from_transactions(Some(r#"
+            WHERE account_id = ?1 AND
+                  timestamp >= ?2 AND 
+                  _removal_timestamp IS NULL
+            ORDER BY timestamp DESC
+        "#));
 
         self.query_with_params(statement_fmt, rusqlite::params![account, start_timestamp], Self::transaction_from_row)
     }
 
     fn transactions_of_between(&self, account: Id, start_timestamp: Timestamp, end_timestamp: Timestamp) -> Result<Vec<EncryptedTransaction>> {
-        let statement_fmt = r#"
-            SELECT transaction_id, timestamp, description, account_id, category_id, amount, _creation_timestamp, _change_timestamp, _removal_timestamp
-              FROM transactions
-             WHERE account_id = ?1 AND
-                   timestamp >= ?2 AND
-                   timestamp < ?3 AND 
-                   _removal_timestamp IS NULL
-             ORDER BY timestamp DESC
-        "#;
+        let statement_fmt = Self::select_from_transactions(Some(r#"
+            WHERE account_id = ?1 AND
+                  timestamp >= ?2 AND
+                  timestamp < ?3 AND 
+                  _removal_timestamp IS NULL
+            ORDER BY timestamp DESC
+        "#));
 
         self.query_with_params(statement_fmt, rusqlite::params![account, start_timestamp, end_timestamp], Self::transaction_from_row)
     }
 
     fn transactions_with(&self, category: Id) -> Result<Vec<EncryptedTransaction>> {
-        let statement_fmt = r#"
-            SELECT transaction_id, timestamp, description, account_id, category_id, amount, _creation_timestamp, _change_timestamp, _removal_timestamp
-              FROM transactions
-             WHERE category_id = ?1 AND 
-                   _removal_timestamp IS NULL
-             ORDER BY timestamp DESC
-        "#;
+        let statement_fmt = Self::select_from_transactions(Some(r#"
+            WHERE category_id = ?1 AND 
+                  _removal_timestamp IS NULL
+            ORDER BY timestamp DESC
+        "#));
 
         self.query_with_params(statement_fmt, rusqlite::params![category], Self::transaction_from_row)
     }
 
     fn transactions_with_after(&self, category: Id, start_timestamp: Timestamp) -> Result<Vec<EncryptedTransaction>> {
-        let statement_fmt = r#"
-            SELECT transaction_id, timestamp, description, account_id, category_id, amount, _creation_timestamp, _change_timestamp, _removal_timestamp
-              FROM transactions
-             WHERE category_id = ?1 AND
-                   timestamp >= ?2 AND 
-                   _removal_timestamp IS NULL
-             ORDER BY timestamp DESC
-        "#;
+        let statement_fmt = Self::select_from_transactions(Some(r#"
+            WHERE category_id = ?1 AND
+                  timestamp >= ?2 AND 
+                  _removal_timestamp IS NULL
+            ORDER BY timestamp DESC
+        "#));
 
         self.query_with_params(statement_fmt, rusqlite::params![category, start_timestamp], Self::transaction_from_row)
     }
 
     fn transactions_with_between(&self, category: Id, start_timestamp: Timestamp, end_timestamp: Timestamp) -> Result<Vec<EncryptedTransaction>> {
-        let statement_fmt = r#"
-            SELECT transaction_id, timestamp, description, account_id, category_id, amount, _creation_timestamp, _change_timestamp, _removal_timestamp
-              FROM transactions
-             WHERE category_id = ?1 AND
-                   timestamp >= ?2 AND
-                   timestamp < ?3 AND 
-                   _removal_timestamp IS NULL
-             ORDER BY timestamp DESC
-        "#;
+        let statement_fmt = Self::select_from_transactions(Some(r#"
+            WHERE category_id = ?1 AND
+                  timestamp >= ?2 AND
+                  timestamp < ?3 AND 
+                  _removal_timestamp IS NULL
+            ORDER BY timestamp DESC
+        "#));
 
         self.query_with_params(statement_fmt, rusqlite::params![category, start_timestamp, end_timestamp], Self::transaction_from_row)
     }
@@ -317,12 +297,10 @@ impl DataStorage for DbStorage {
     }
 
     fn account(&self, account: Id) -> Result<EncryptedAccount> {
-        let statement_fmt = r#"
-            SELECT account_id, name, balance, _creation_timestamp, _change_timestamp, _removal_timestamp
-              FROM accounts
-             WHERE account_id = ?1 AND 
-                   _removal_timestamp IS NULL
-        "#;
+        let statement_fmt = Self::select_from_accounts(Some(r#"
+            WHERE account_id = ?1 AND 
+                  _removal_timestamp IS NULL
+        "#));
 
         let mut result = self.query_with_params(statement_fmt, 
             rusqlite::params![account], Self::account_from_row)?;
@@ -335,11 +313,9 @@ impl DataStorage for DbStorage {
     }
 
     fn accounts(&self) -> Result<Vec<EncryptedAccount>> {
-        let statement = r#"
-            SELECT account_id, name, balance, _creation_timestamp, _change_timestamp, _removal_timestamp
-              FROM accounts
-             WHERE _removal_timestamp IS NULL
-        "#;
+        let statement = Self::select_from_accounts(Some(r#"
+            WHERE _removal_timestamp IS NULL
+        "#));
 
         self.query(statement, Self::account_from_row)
     }
@@ -413,12 +389,10 @@ impl DataStorage for DbStorage {
     }
 
     fn category(&self, category: Id) -> Result<EncryptedCategory> {
-        let statement_fmt = r#"
-            SELECT category_id, name, type, _creation_timestamp, _change_timestamp, _removal_timestamp
-              FROM categories
-             WHERE category_id = ?1 AND 
-                   _removal_timestamp IS NULL
-        "#;
+        let statement_fmt = Self::select_from_categories(Some(r#"
+            WHERE category_id = ?1 AND 
+                  _removal_timestamp IS NULL
+        "#));
 
         let mut result = self.query_with_params(statement_fmt, 
             rusqlite::params![category], Self::category_from_row)?;
@@ -431,24 +405,20 @@ impl DataStorage for DbStorage {
     }
 
     fn categories(&self) -> Result<Vec<EncryptedCategory>> {
-        let statement = r#"
-            SELECT category_id, name, type, _creation_timestamp, _change_timestamp, _removal_timestamp
-              FROM categories
-             WHERE _removal_timestamp IS NULL
-             ORDER BY type
-        "#;
+        let statement = Self::select_from_categories(Some(r#"
+            WHERE _removal_timestamp IS NULL
+            ORDER BY type
+        "#));
 
         self.query(statement, Self::category_from_row)
     }
 
     fn categories_of(&self, category_type: CategoryType) -> Result<Vec<EncryptedCategory>> {
-        let statement_fmt = r#"
-            SELECT category_id, name, type, _creation_timestamp, _change_timestamp, _removal_timestamp
-              FROM categories
-             WHERE type = ?1 AND 
-                   _removal_timestamp IS NULL
-             ORDER BY type
-        "#;
+        let statement_fmt = Self::select_from_categories(Some(r#"
+            WHERE type = ?1 AND 
+                  _removal_timestamp IS NULL
+            ORDER BY type
+        "#));
 
         self.query_with_params(statement_fmt, rusqlite::params![category_type], Self::category_from_row)
     }
@@ -507,12 +477,10 @@ impl DataStorage for DbStorage {
     }
 
     fn plan(&self, plan: Id) -> Result<EncryptedPlan> {
-        let statement_fmt = r#"
-            SELECT plan_id, category_id, name, amount_limit, _creation_timestamp, _change_timestamp, _removal_timestamp
-              FROM plans
-             WHERE plan_id = ?1 AND 
-                   _removal_timestamp IS NULL
-        "#;
+        let statement_fmt = Self::select_from_plans(Some(r#"
+            WHERE plan_id = ?1 AND 
+                  _removal_timestamp IS NULL
+        "#));
 
         let mut result = self.query_with_params(statement_fmt, 
             rusqlite::params![plan], Self::plan_from_row)?;
@@ -525,23 +493,19 @@ impl DataStorage for DbStorage {
     }
 
     fn plans(&self) -> Result<Vec<EncryptedPlan>> {
-        let statement = r#"
-            SELECT plan_id, category_id, name, amount_limit, _creation_timestamp, _change_timestamp, _removal_timestamp
-              FROM plans
-             WHERE _removal_timestamp IS NULL
-             ORDER BY category_id
-        "#;
+        let statement = Self::select_from_plans(Some(r#"
+            WHERE _removal_timestamp IS NULL
+            ORDER BY category_id
+        "#));
 
         self.query(statement, Self::plan_from_row)
     }
 
     fn plans_for(&self, category: Id) -> Result<Vec<EncryptedPlan>> {
-        let statement_fmt = r#"
-            SELECT plan_id, category_id, name, amount_limit, _creation_timestamp, _change_timestamp, _removal_timestamp
-              FROM plans
-             WHERE category_id = ?1 AND 
-                   _removal_timestamp IS NULL
-        "#;
+        let statement_fmt = Self::select_from_plans(Some(r#"
+            WHERE category_id = ?1 AND 
+                  _removal_timestamp IS NULL
+        "#));
 
         self.query_with_params(statement_fmt, rusqlite::params![category], Self::plan_from_row)
     }
@@ -681,12 +645,13 @@ impl DbStorage {
             .join(DB_FILE)
     }
 
-    fn query_with_params<T, P, C>(&self, statement: &str, params: P, convert: C) -> Result<Vec<T>>
+    fn query_with_params<S, T, P, C>(&self, statement: S, params: P, convert: C) -> Result<Vec<T>>
     where
+        S: AsRef<str>,
         P: rusqlite::Params,
         C: Fn(&rusqlite::Row<'_>) -> Result<T>
     {
-        let mut statement = self.db.prepare(statement)?;
+        let mut statement = self.db.prepare(statement.as_ref())?;
         let mut rows = statement.query(params)?;
 
         let mut result = Vec::new();
@@ -697,8 +662,9 @@ impl DbStorage {
         Ok(result)
     }
 
-    fn query<T, C>(&self, statement: &str, convert: C) -> Result<Vec<T>>
+    fn query<S, T, C>(&self, statement: S, convert: C) -> Result<Vec<T>>
     where
+        S: AsRef<str>,
         C: Fn(&rusqlite::Row<'_>) -> Result<T>
     {
         self.query_with_params(statement, [], convert)
@@ -730,6 +696,53 @@ impl DbStorage {
         ];
 
         predefined.contains(&category)
+    }
+}
+
+
+impl DbStorage {
+    fn select_from_transactions<S: Into<String>>(modifiers: Option<S>) -> String {
+        let modifiers = modifiers
+            .map_or(String::new(), S::into);
+
+        return format!(r#"
+            SELECT transaction_id, timestamp, description, account_id, category_id, amount, _creation_timestamp, _change_timestamp, _removal_timestamp
+              FROM transactions
+                {}
+        "#, modifiers);
+    }
+
+    fn select_from_accounts<S: Into<String>>(modifiers: Option<S>) -> String {
+        let modifiers = modifiers
+            .map_or(String::new(), S::into);
+
+        return format!(r#"
+            SELECT account_id, name, balance, _creation_timestamp, _change_timestamp, _removal_timestamp
+              FROM accounts
+                {}
+        "#, modifiers);
+    }
+
+    fn select_from_categories<S: Into<String>>(modifiers: Option<S>) -> String {
+        let modifiers = modifiers
+            .map_or(String::new(), S::into);
+
+        return format!(r#"
+            SELECT category_id, name, type, _creation_timestamp, _change_timestamp, _removal_timestamp
+              FROM categories
+                {}
+        "#, modifiers);
+    }
+
+    fn select_from_plans<S: Into<String>>(modifiers: Option<S>) -> String {
+        let modifiers = modifiers
+            .map_or(String::new(), S::into);
+
+        return format!(r#"
+            SELECT plan_id, category_id, name, amount_limit, _creation_timestamp, _change_timestamp, _removal_timestamp
+              FROM plans
+                {}
+        "#, modifiers);
     }
 }
 
