@@ -517,8 +517,8 @@ where
         // Then join them together
         //
 
-        let local_changelog = self.export_local_changes(&last_sync)?;
-        self.merge_changes(&cumulative_changelog)?;
+        let local_changelog = self.export_local_changes(last_sync)?;
+        self.merge_changes(&cumulative_changelog, last_sync)?;
         
         cumulative_changelog.append(local_changelog)?;
 
@@ -593,12 +593,12 @@ where
         Ok(CryptoBuffer::from(salt))
     }
 
-    fn export_local_changes(&self, _base: &Timestamp) -> Result<Changelog> {
+    fn export_local_changes(&self, _last_sync: &Timestamp) -> Result<Changelog> {
         let mut _local_changelog = Changelog::new();
         todo!("export changelog")
     }
 
-    fn merge_changes(&self, changelog: &Changelog) -> Result<()> {
+    fn merge_changes(&self, changelog: &Changelog, last_sync: &Timestamp) -> Result<()> {
         //
         // First, added items are processed in the following order:
         //  1. Accounts
@@ -607,29 +607,43 @@ where
         //  4. Transactions
         //
 
-        self.merge_step(&changelog.accounts.added, |account| {
-            //
-            // Explicitly set account's balance to its initial value, because
-            // they may differ in synced account. It could lead to inconsistency.
-            //
+        self.merge_step(&changelog.accounts.added,
+            |account| {
+                account.meta_info.added_timestamp.unwrap().ge(last_sync) 
+            }, 
+            |account| {
+                //
+                // Explicitly set account's balance to its initial value, because
+                // they may differ in synced account. It could lead to inconsistency.
+                //
 
-            let mut account = account.clone();
-            account.balance = account.initial_balance;
+                let mut account = account.clone();
+                account.balance = account.initial_balance;
 
-            self.add_account(&account)
-        })?;
+                self.add_account(&account)
+            }
+        )?;
 
-        self.merge_step(&changelog.categories.added, |category| {
-            self.add_category(category)
-        })?;
+        self.merge_step(&changelog.categories.added,
+            |category| {
+                category.meta_info.added_timestamp.unwrap().ge(last_sync)
+            },
+            |category| { self.add_category(category) }
+        )?;
 
-        self.merge_step(&changelog.plans.added, |plan| {
-            self.add_plan(plan)
-        })?;
+        self.merge_step(&changelog.plans.added,
+            |plan| {
+                plan.meta_info.added_timestamp.unwrap().ge(last_sync)
+            }, 
+            |plan| { self.add_plan(plan) }
+        )?;
 
-        self.merge_step(&changelog.transactions.added, |transaction| {
-            self.add_transaction(transaction)
-        })?;
+        self.merge_step(&changelog.transactions.added,
+            |transaction| {
+                transaction.meta_info.added_timestamp.unwrap().ge(last_sync)
+            },
+            |transaction| { self.add_transaction(transaction) }
+        )?;
 
         //
         // Then, changed items are processed in the reverse order
@@ -641,33 +655,54 @@ where
         // Finally, removed items are processed in the reverse order too
         //
 
-        self.merge_step(&changelog.transactions.removed, |transaction| {
-            self.remove_transaction(transaction.id.unwrap(), false,
-                transaction.meta_info.removed_timestamp.unwrap())
-        })?;
+        self.merge_step(&changelog.transactions.removed,
+            |transaction| {
+                transaction.meta_info.removed_timestamp.unwrap().ge(last_sync)
+            },
+            |transaction| {
+                self.remove_transaction(transaction.id.unwrap(), false,
+                    transaction.meta_info.removed_timestamp.unwrap())
+            }
+        )?;
 
-        self.merge_step(&changelog.plans.removed, |plan| {
-            self.remove_plan(plan.id.unwrap(), plan.meta_info.removed_timestamp.unwrap())
-        })?;
+        self.merge_step(&changelog.plans.removed,
+            |plan| {
+                plan.meta_info.removed_timestamp.unwrap().ge(last_sync)
+            },
+            |plan| {
+                self.remove_plan(plan.id.unwrap(), plan.meta_info.removed_timestamp.unwrap())
+            }
+        )?;
 
-        self.merge_step(&changelog.categories.removed, |category| {
-            self.remove_category(category.id.unwrap(), category.meta_info.removed_timestamp.unwrap())
-        })?;
+        self.merge_step(&changelog.categories.removed,
+            |category| {
+                category.meta_info.removed_timestamp.unwrap().ge(last_sync)
+            },
+            |category| {
+                self.remove_category(category.id.unwrap(), category.meta_info.removed_timestamp.unwrap())
+            }
+        )?;
 
-        self.merge_step(&changelog.accounts.removed, |account| {
-            self.remove_account(account.id.unwrap(), false,
-                account.meta_info.removed_timestamp.unwrap())
-        })?;
+        self.merge_step(&changelog.accounts.removed,
+            |account| {
+                account.meta_info.removed_timestamp.unwrap().ge(last_sync)
+            },
+            |account| {
+                self.remove_account(account.id.unwrap(), false,
+                    account.meta_info.removed_timestamp.unwrap())
+            }
+        )?;
 
         Ok(())
     }
 
-    fn merge_step<T, I, Mo>(&self, items: I, merge_operation: Mo) -> Result<()>
+    fn merge_step<T, I, F, Mo>(&self, items: I, filter: F, merge_operation: Mo) -> Result<()>
     where
         I: IntoIterator<Item = T>,
+        F: Fn(&T) -> bool,
         Mo: Fn(T) -> Result<()>
     {
-        for item in items {
+        for item in items.into_iter().filter(filter) {
             merge_operation(item)?;
         }
 
