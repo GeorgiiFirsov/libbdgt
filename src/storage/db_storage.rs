@@ -241,11 +241,11 @@ impl DataStorage for DbStorage {
         let statement_fmt = match account.id {
             None => r#"
                 INSERT INTO accounts (name, balance, initial_balance, _creation_timestamp)
-                VALUES (?1, ?2, ?3)
+                VALUES (?1, ?2, ?3, ?4)
             "#,
             Some(_) => r#"
                 INSERT INTO accounts (account_id, name, balance, initial_balance, _creation_timestamp)
-                VALUES (?1, ?2, ?3, ?4)
+                VALUES (?1, ?2, ?3, ?4, ?5)
             "#
         };
 
