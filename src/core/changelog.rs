@@ -18,17 +18,6 @@ pub(crate) struct SimpleChangelog<T> {
 }
 
 
-impl<T> SimpleChangelog<T> {
-    fn new() -> Self {
-        SimpleChangelog::<T> {
-            added: Vec::new(),
-            changed: Vec::new(),
-            removed: Vec::new()
-        }
-    }
-}
-
-
 /// Database changelog representation.
 #[derive(Serialize, Deserialize)]
 pub(crate) struct Changelog {
