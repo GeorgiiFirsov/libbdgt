@@ -92,4 +92,6 @@ implement_from_error!(
     std::convert::Infallible,
     git2::Error,
     scrypt::errors::InvalidOutputLen,
+    rmp_serde::decode::Error,
+    rmp_serde::encode::Error,
 );

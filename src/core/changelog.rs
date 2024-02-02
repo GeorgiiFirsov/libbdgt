@@ -1,8 +1,11 @@
-use crate::error::Result;
+use serde::{Serialize, Deserialize};
+
+use crate::error::{Result, Error};
 use crate::storage::{Transaction, Account, Category, Plan};
 
 
 /// Simple changelog representation for some items.
+#[derive(Serialize, Deserialize)]
 pub(crate) struct SimpleChangelog<T> {
     /// Added items.
     pub added: Vec<T>,
@@ -27,6 +30,7 @@ impl<T> SimpleChangelog<T> {
 
 
 /// Database changelog representation.
+#[derive(Serialize, Deserialize)]
 pub(crate) struct Changelog {
     /// Accounts changelog.
     pub accounts: SimpleChangelog<Account>,
@@ -47,60 +51,36 @@ impl Changelog {
     /// 
     /// * `binary_changelog` - binary changelog representation
     pub(crate) fn new(binary_changelog: &[u8]) -> Result<Self> {
-        let result = Changelog {
-            accounts: SimpleChangelog::new(),
-            categories: SimpleChangelog::new(),
-            transactions: SimpleChangelog::new(),
-            plans: SimpleChangelog::new()
-        };
-
-        //
-        // Parse changelog record-by-record. Records have the following
-        // grammar:
-        //
-        // record       = record-type record-data ;
-        //
-        // record-type  = A 
-        //              | C
-        //              | R ;
-        //
-        // record-data  = data-type data-content ;
-        //
-        // data-type    = A
-        //              | C
-        //              | T
-        //              | P ;
-        //
-        // data-content = <serialized  data of account, category, transaction or plan>
-        //
-
-        let mut changelog = std::io::Cursor::new(binary_changelog);
-        while let Some(_record) = Self::read_record(&mut changelog)? {
-            todo!("Implement record handling")
-        }
-
-        Ok(result)
+        rmp_serde::from_read(binary_changelog)
+            .map_err(Error::from)
     }
 
     /// Appends another changelog to the current one.
     /// 
     /// * `changelog` - a changelog to append
-    pub(crate) fn append(&mut self, _changelog: Changelog) -> Result<()> {
-        todo!("append new changelog")
+    pub(crate) fn append(&mut self, mut changelog: Changelog) -> Result<()> {
+        self.accounts.added.append(&mut changelog.accounts.added);
+        self.accounts.changed.append(&mut changelog.accounts.changed);
+        self.accounts.removed.append(&mut changelog.accounts.removed);
+
+        self.categories.added.append(&mut changelog.categories.added);
+        self.categories.changed.append(&mut changelog.categories.changed);
+        self.categories.removed.append(&mut changelog.categories.removed);
+
+        self.transactions.added.append(&mut changelog.transactions.added);
+        self.transactions.changed.append(&mut changelog.transactions.changed);
+        self.transactions.removed.append(&mut changelog.transactions.removed);
+
+        self.plans.added.append(&mut changelog.plans.added);
+        self.plans.changed.append(&mut changelog.plans.changed);
+        self.plans.removed.append(&mut changelog.plans.removed);
+
+        Ok(())
     }
 
     /// Converts current changelog into a binary representation.
-    pub(crate) fn as_bytes(&self) -> &[u8] {
-        todo!("convert to bytes")
-    }
-}
-
-
-impl Changelog {
-    fn read_record<Br: std::io::BufRead>(binary_changelog: &mut Br) -> Result<Option<()>> {
-        let mut buffer = Vec::new();
-        binary_changelog.read_until(0x00, &mut buffer)?;
-
-        Ok(None)
+    pub(crate) fn as_bytes(&self) -> Result<Vec<u8>> {
+        rmp_serde::to_vec(self)
+            .map_err(Error::from)
     }
 }

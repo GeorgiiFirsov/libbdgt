@@ -537,7 +537,7 @@ where
             self.crypto_engine.symmetric_key_length())?;
 
         let cumulative_changelog = self.crypto_engine
-            .encrypt_symmetric(encryption_key.as_bytes(), cumulative_changelog.as_bytes())?;
+            .encrypt_symmetric(encryption_key.as_bytes(), &cumulative_changelog.as_bytes()?)?;
 
         changelog_rw.write_all(cumulative_changelog.as_bytes())?;
 
