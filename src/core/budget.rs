@@ -593,9 +593,26 @@ where
         Ok(CryptoBuffer::from(salt))
     }
 
-    fn export_local_changes(&self, _last_sync: &Timestamp) -> Result<Changelog> {
-        let mut _local_changelog = Changelog::new();
-        todo!("export changelog")
+    fn export_local_changes(&self, last_sync: &Timestamp) -> Result<Changelog> {
+        let mut local_changelog = Changelog::new();
+
+        local_changelog.accounts.added = self.accounts_added_since(*last_sync)?;
+        local_changelog.accounts.changed = self.accounts_changed_since(*last_sync)?;
+        local_changelog.accounts.removed = self.accounts_removed_since(*last_sync)?;
+
+        local_changelog.categories.added = self.categories_added_since(*last_sync)?;
+        local_changelog.categories.changed = self.categories_changed_since(*last_sync)?;
+        local_changelog.categories.removed = self.categories_added_since(*last_sync)?;
+
+        local_changelog.plans.added = self.plans_added_since(*last_sync)?;
+        local_changelog.plans.changed = self.plans_changed_since(*last_sync)?;
+        local_changelog.plans.removed = self.plans_added_since(*last_sync)?;
+
+        local_changelog.transactions.added = self.transactions_added_since(*last_sync)?;
+        local_changelog.transactions.changed = self.transactions_changed_since(*last_sync)?;
+        local_changelog.transactions.removed = self.transactions_removed_since(*last_sync)?;
+
+        Ok(local_changelog)
     }
 
     fn merge_changes(&self, changelog: &Changelog, last_sync: &Timestamp) -> Result<()> {
@@ -707,6 +724,110 @@ where
         }
 
         Ok(())
+    }
+}
+
+
+impl<Ce, Se, St> Budget<Ce, Se, St>
+where
+    Ce: CryptoEngine,
+    Se: SyncEngine,
+    St: DataStorage
+{
+    fn transactions_added_since(&self, base: Timestamp) -> Result<Vec<Transaction>> {
+        let encrypted_transactions = self.storage.transactions_added_since(base)?;
+        encrypted_transactions
+            .iter()
+            .map(|transaction| self.decrypt_transaction(transaction))
+            .collect()
+    }
+
+    fn transactions_changed_since(&self, base: Timestamp) -> Result<Vec<Transaction>> {
+        let encrypted_transactions = self.storage.transactions_changed_since(base)?;
+        encrypted_transactions
+            .iter()
+            .map(|transaction| self.decrypt_transaction(transaction))
+            .collect()
+    }
+
+    fn transactions_removed_since(&self, base: Timestamp) -> Result<Vec<Transaction>> {
+        let encrypted_transactions = self.storage.transactions_removed_since(base)?;
+        encrypted_transactions
+            .iter()
+            .map(|transaction| self.decrypt_transaction(transaction))
+            .collect()
+    }
+
+    fn accounts_added_since(&self, base: Timestamp) -> Result<Vec<Account>> {
+        let encrypted_accounts = self.storage.accounts_added_since(base)?;
+        encrypted_accounts
+            .iter()
+            .map(|account| self.decrypt_account(account))
+            .collect()
+    }
+
+    fn accounts_changed_since(&self, base: Timestamp) -> Result<Vec<Account>> {
+        let encrypted_accounts = self.storage.accounts_changed_since(base)?;
+        encrypted_accounts
+            .iter()
+            .map(|account| self.decrypt_account(account))
+            .collect()
+    }
+
+    fn accounts_removed_since(&self, base: Timestamp) -> Result<Vec<Account>> {
+        let encrypted_accounts = self.storage.accounts_removed_since(base)?;
+        encrypted_accounts
+            .iter()
+            .map(|account| self.decrypt_account(account))
+            .collect()
+    }
+
+    fn categories_added_since(&self, base: Timestamp) -> Result<Vec<Category>> {
+        let encrypted_categories = self.storage.categories_added_since(base)?;
+        encrypted_categories
+            .iter()
+            .map(|category| self.decrypt_category(category))
+            .collect()
+    }
+
+    fn categories_changed_since(&self, base: Timestamp) -> Result<Vec<Category>> {
+        let encrypted_categories = self.storage.categories_changed_since(base)?;
+        encrypted_categories
+            .iter()
+            .map(|category| self.decrypt_category(category))
+            .collect()
+    }
+
+    fn categories_removed_since(&self, base: Timestamp) -> Result<Vec<Category>> {
+        let encrypted_categories = self.storage.categories_removed_since(base)?;
+        encrypted_categories
+            .iter()
+            .map(|category| self.decrypt_category(category))
+            .collect()
+    }
+
+    fn plans_added_since(&self, base: Timestamp) -> Result<Vec<Plan>> {
+        let encrypted_plans = self.storage.plans_added_since(base)?;
+        encrypted_plans
+            .iter()
+            .map(|plan| self.decrypt_plan(plan))
+            .collect()
+    }
+
+    fn plans_changed_since(&self, base: Timestamp) -> Result<Vec<Plan>> {
+        let encrypted_plans = self.storage.plans_changed_since(base)?;
+        encrypted_plans
+            .iter()
+            .map(|plan| self.decrypt_plan(plan))
+            .collect()
+    }
+
+    fn plans_removed_since(&self, base: Timestamp) -> Result<Vec<Plan>> {
+        let encrypted_plans = self.storage.plans_removed_since(base)?;
+        encrypted_plans
+            .iter()
+            .map(|plan| self.decrypt_plan(plan))
+            .collect()
     }
 }
 
