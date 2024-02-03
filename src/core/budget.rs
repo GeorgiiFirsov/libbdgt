@@ -221,11 +221,7 @@ where
 
     // Return all transactions.
     pub fn transactions(&self) -> Result<Vec<Transaction>> {
-        let encrypted_transactions = self.storage.transactions()?;
-        encrypted_transactions
-            .iter()
-            .map(|transaction| self.decrypt_transaction(transaction))
-            .collect()
+        self.decrypt_transactions(&self.storage.transactions()?)
     }
 
     /// Return all transactions between a given time points (including start 
@@ -237,11 +233,7 @@ where
     /// * `start_timestamp` - point in time to start from
     /// * `end_timestamp` - point in time to end before
     pub fn transactions_between(&self, start_timestamp: Timestamp, end_timestamp: Timestamp) -> Result<Vec<Transaction>> {
-        let encrypted_transactions = self.storage.transactions_between(start_timestamp, end_timestamp)?;
-        encrypted_transactions
-            .iter()
-            .map(|transaction| self.decrypt_transaction(transaction))
-            .collect() 
+        self.decrypt_transactions(&self.storage.transactions_between(start_timestamp, end_timestamp)?) 
     }
 
     /// Return all transactions bound with a given account sorted by timestamp 
@@ -251,11 +243,7 @@ where
     /// 
     /// * `account` - account identifier to return transactions for
     pub fn transactions_of(&self, account: Id) -> Result<Vec<Transaction>> {
-        let encrypted_transactions = self.storage.transactions_of(account)?;
-        encrypted_transactions
-            .iter()
-            .map(|transaction| self.decrypt_transaction(transaction))
-            .collect() 
+        self.decrypt_transactions(&self.storage.transactions_of(account)?) 
     }
 
     /// Return all transactions between a given time points (including start 
@@ -268,11 +256,7 @@ where
     /// * `start_timestamp` - point in time to start from
     /// * `end_timestamp` - point in time to end before
     pub fn transactions_of_between(&self, account: Id, start_timestamp: Timestamp, end_timestamp: Timestamp) -> Result<Vec<Transaction>> {
-        let encrypted_transactions = self.storage.transactions_of_between(account, start_timestamp, end_timestamp)?;
-        encrypted_transactions
-            .iter()
-            .map(|transaction| self.decrypt_transaction(transaction))
-            .collect() 
+        self.decrypt_transactions(&self.storage.transactions_of_between(account, start_timestamp, end_timestamp)?) 
     }
 
     /// Return all transactions with given category sorted by timestamp in
@@ -282,11 +266,7 @@ where
     /// 
     /// * `category` - category to return transactions with
     pub fn transactions_with(&self, category: Id) -> Result<Vec<Transaction>> {
-        let encrypted_transactions = self.storage.transactions_with(category)?;
-        encrypted_transactions
-            .iter()
-            .map(|transaction| self.decrypt_transaction(transaction))
-            .collect() 
+        self.decrypt_transactions(&self.storage.transactions_with(category)?) 
     }
 
     /// Return all transactions between a given time points (including start 
@@ -299,11 +279,7 @@ where
     /// * `start_timestamp` - point in time to start from
     /// * `end_timestamp` - point in time to end before
     pub fn transactions_with_between(&self, category: Id, start_timestamp: Timestamp, end_timestamp: Timestamp) -> Result<Vec<Transaction>> {
-        let encrypted_transactions = self.storage.transactions_with_between(category, start_timestamp, end_timestamp)?;
-        encrypted_transactions
-            .iter()
-            .map(|transaction| self.decrypt_transaction(transaction))
-            .collect() 
+        self.decrypt_transactions(&self.storage.transactions_with_between(category, start_timestamp, end_timestamp)?) 
     }
 
     /// Add a new account.
@@ -339,17 +315,12 @@ where
     /// 
     /// * `account` - identifier to return record for
     pub fn account(&self, account: Id) -> Result<Account> {
-        let encrypted_account = self.storage.account(account)?;
-        self.decrypt_account(&encrypted_account)
+        self.decrypt_account(&self.storage.account(account)?)
     }
 
     /// Return all accounts.
     pub fn accounts(&self) -> Result<Vec<Account>> {
-        let encrypted_accounts = self.storage.accounts()?;
-        encrypted_accounts
-            .iter()
-            .map(|account| self.decrypt_account(account))
-            .collect()
+        self.decrypt_accounts(&self.storage.accounts()?)
     }
 
     /// Add a new category.
@@ -375,28 +346,19 @@ where
     /// 
     /// * `category` - identifier to return record for
     pub fn category(&self, category: Id) -> Result<Category> {
-        let encrypted_category = self.storage.category(category)?;
-        self.decrypt_category(&encrypted_category)
+        self.decrypt_category(&self.storage.category(category)?)
     }
 
     /// Return all categories.
     pub fn categories(&self) -> Result<Vec<Category>> {
-        let encrypted_categories = self.storage.categories()?;
-        encrypted_categories
-            .iter()
-            .map(|category| self.decrypt_category(category))
-            .collect()
+        self.decrypt_categories(&self.storage.categories()?)
     }
 
     /// Return all categories of specific type.
     /// 
     /// * `category_type` - type to return categories of
     pub fn categories_of(&self, category_type: CategoryType) -> Result<Vec<Category>> {
-        let encrypted_categories = self.storage.categories_of(category_type)?;
-        encrypted_categories
-            .iter()
-            .map(|category| self.decrypt_category(category))
-            .collect()
+        self.decrypt_categories(&self.storage.categories_of(category_type)?)
     }
 
     /// Add a new plan.
@@ -418,28 +380,19 @@ where
     /// 
     /// * `plan` - identifier to return record for
     pub fn plan(&self, plan: Id) -> Result<Plan> {
-        let encrypted_plan = self.storage.plan(plan)?;
-        self.decrypt_plan(&encrypted_plan)
+        self.decrypt_plan(&self.storage.plan(plan)?)
     }
 
     /// Return all plans sorted by category.
     pub fn plans(&self) -> Result<Vec<Plan>> {
-        let encrypted_plans = self.storage.plans()?;
-        encrypted_plans
-            .iter()
-            .map(|plan| self.decrypt_plan(plan))
-            .collect()
+        self.decrypt_plans(&self.storage.plans()?)
     }
 
     /// Return all plans for specific category.
     /// 
     /// * `category` - category to return plans for
     pub fn plans_for(&self, category: Id) -> Result<Vec<Plan>> {
-        let encrypted_plans = self.storage.plans_for(category)?;
-        encrypted_plans
-            .iter()
-            .map(|plan| self.decrypt_plan(plan))
-            .collect()
+        self.decrypt_plans(&self.storage.plans_for(category)?)
     }
 
     /// Delete permanently all previously removed items.
@@ -735,99 +688,51 @@ where
     St: DataStorage
 {
     fn transactions_added_since(&self, base: Timestamp) -> Result<Vec<Transaction>> {
-        let encrypted_transactions = self.storage.transactions_added_since(base)?;
-        encrypted_transactions
-            .iter()
-            .map(|transaction| self.decrypt_transaction(transaction))
-            .collect()
+        self.decrypt_transactions(&self.storage.transactions_added_since(base)?)
     }
 
     fn transactions_changed_since(&self, base: Timestamp) -> Result<Vec<Transaction>> {
-        let encrypted_transactions = self.storage.transactions_changed_since(base)?;
-        encrypted_transactions
-            .iter()
-            .map(|transaction| self.decrypt_transaction(transaction))
-            .collect()
+        self.decrypt_transactions(&self.storage.transactions_changed_since(base)?)
     }
 
     fn transactions_removed_since(&self, base: Timestamp) -> Result<Vec<Transaction>> {
-        let encrypted_transactions = self.storage.transactions_removed_since(base)?;
-        encrypted_transactions
-            .iter()
-            .map(|transaction| self.decrypt_transaction(transaction))
-            .collect()
+        self.decrypt_transactions(&self.storage.transactions_removed_since(base)?)
     }
 
     fn accounts_added_since(&self, base: Timestamp) -> Result<Vec<Account>> {
-        let encrypted_accounts = self.storage.accounts_added_since(base)?;
-        encrypted_accounts
-            .iter()
-            .map(|account| self.decrypt_account(account))
-            .collect()
+        self.decrypt_accounts(&self.storage.accounts_added_since(base)?)
     }
 
     fn accounts_changed_since(&self, base: Timestamp) -> Result<Vec<Account>> {
-        let encrypted_accounts = self.storage.accounts_changed_since(base)?;
-        encrypted_accounts
-            .iter()
-            .map(|account| self.decrypt_account(account))
-            .collect()
+        self.decrypt_accounts(&self.storage.accounts_changed_since(base)?)
     }
 
     fn accounts_removed_since(&self, base: Timestamp) -> Result<Vec<Account>> {
-        let encrypted_accounts = self.storage.accounts_removed_since(base)?;
-        encrypted_accounts
-            .iter()
-            .map(|account| self.decrypt_account(account))
-            .collect()
+        self.decrypt_accounts(&self.storage.accounts_removed_since(base)?)
     }
 
     fn categories_added_since(&self, base: Timestamp) -> Result<Vec<Category>> {
-        let encrypted_categories = self.storage.categories_added_since(base)?;
-        encrypted_categories
-            .iter()
-            .map(|category| self.decrypt_category(category))
-            .collect()
+        self.decrypt_categories(&self.storage.categories_added_since(base)?)
     }
 
     fn categories_changed_since(&self, base: Timestamp) -> Result<Vec<Category>> {
-        let encrypted_categories = self.storage.categories_changed_since(base)?;
-        encrypted_categories
-            .iter()
-            .map(|category| self.decrypt_category(category))
-            .collect()
+        self.decrypt_categories(&self.storage.categories_changed_since(base)?)
     }
 
     fn categories_removed_since(&self, base: Timestamp) -> Result<Vec<Category>> {
-        let encrypted_categories = self.storage.categories_removed_since(base)?;
-        encrypted_categories
-            .iter()
-            .map(|category| self.decrypt_category(category))
-            .collect()
+        self.decrypt_categories(&self.storage.categories_removed_since(base)?)
     }
 
     fn plans_added_since(&self, base: Timestamp) -> Result<Vec<Plan>> {
-        let encrypted_plans = self.storage.plans_added_since(base)?;
-        encrypted_plans
-            .iter()
-            .map(|plan| self.decrypt_plan(plan))
-            .collect()
+        self.decrypt_plans(&self.storage.plans_added_since(base)?)
     }
 
     fn plans_changed_since(&self, base: Timestamp) -> Result<Vec<Plan>> {
-        let encrypted_plans = self.storage.plans_changed_since(base)?;
-        encrypted_plans
-            .iter()
-            .map(|plan| self.decrypt_plan(plan))
-            .collect()
+        self.decrypt_plans(&self.storage.plans_changed_since(base)?)
     }
 
     fn plans_removed_since(&self, base: Timestamp) -> Result<Vec<Plan>> {
-        let encrypted_plans = self.storage.plans_removed_since(base)?;
-        encrypted_plans
-            .iter()
-            .map(|plan| self.decrypt_plan(plan))
-            .collect()
+        self.decrypt_plans(&self.storage.plans_removed_since(base)?)
     }
 }
 
@@ -900,6 +805,13 @@ where
         })
     }
 
+    fn decrypt_transactions(&self, encrypted_transactions: &Vec<EncryptedTransaction>) -> Result<Vec<Transaction>> {
+        encrypted_transactions
+            .iter()
+            .map(|transaction| self.decrypt_transaction(transaction))
+            .collect()
+    }
+
     fn encrypt_account(&self, account: &Account) -> Result<EncryptedAccount> {
         let encrypted_name = self.encrypt_string(&account.name)?;
         let encrypted_balance = self.encrypt_isize(&account.balance)?;
@@ -928,6 +840,13 @@ where
         })
     }
 
+    fn decrypt_accounts(&self, encrypted_accounts: &Vec<EncryptedAccount>) -> Result<Vec<Account>> {
+        encrypted_accounts
+            .iter()
+            .map(|account| self.decrypt_account(account))
+            .collect()
+    }
+
     fn encrypt_category(&self, category: &Category) -> Result<EncryptedCategory> {
         let encrypted_name = self.encrypt_string(&category.name)?;
 
@@ -948,6 +867,13 @@ where
             category_type: encrypted_category.category_type,
             meta_info: encrypted_category.meta_info
         })
+    }
+
+    fn decrypt_categories(&self, encrypted_categories: &Vec<EncryptedCategory>) -> Result<Vec<Category>> {
+        encrypted_categories
+            .iter()
+            .map(|category| self.decrypt_category(category))
+            .collect()
     }
 
     fn encrypt_plan(&self, plan: &Plan) -> Result<EncryptedPlan> {
@@ -974,5 +900,12 @@ where
             amount_limit: decrypted_amount_limit,
             meta_info: encrypted_plan.meta_info
         })
+    }
+
+    fn decrypt_plans(&self, encrypted_plans: &Vec<EncryptedPlan>) -> Result<Vec<Plan>> {
+        encrypted_plans
+            .iter()
+            .map(|plan| self.decrypt_plan(plan))
+            .collect()
     }
 }
