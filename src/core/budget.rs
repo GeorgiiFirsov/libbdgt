@@ -602,11 +602,11 @@ where
 
         local_changelog.categories.added = self.categories_added_since(*last_sync)?;
         local_changelog.categories.changed = self.categories_changed_since(*last_sync)?;
-        local_changelog.categories.removed = self.categories_added_since(*last_sync)?;
+        local_changelog.categories.removed = self.categories_removed_since(*last_sync)?;
 
         local_changelog.plans.added = self.plans_added_since(*last_sync)?;
         local_changelog.plans.changed = self.plans_changed_since(*last_sync)?;
-        local_changelog.plans.removed = self.plans_added_since(*last_sync)?;
+        local_changelog.plans.removed = self.plans_removed_since(*last_sync)?;
 
         local_changelog.transactions.added = self.transactions_added_since(*last_sync)?;
         local_changelog.transactions.changed = self.transactions_changed_since(*last_sync)?;
