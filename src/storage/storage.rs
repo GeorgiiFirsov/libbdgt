@@ -10,9 +10,6 @@ use super::data::{EncryptedTransaction, EncryptedCategory, EncryptedAccount, Enc
 /// - creation operation. It writes creation timestamp from data meta
 ///   information if present. Otherwise, an error is occurred.
 ///
-/// - update operation. It writes change timestamp from data meta
-///   information if present. Otherwise, change timestamp is not updated.
-///
 /// - removal operation. It writes removal timestamp always.
 ///
 /// - query operation. It does not update any timestamps, just reads all
@@ -153,11 +150,6 @@ pub trait DataStorage {
     /// * `category` - protected category data
     fn add_category(&self, category: EncryptedCategory) -> Result<()>;
 
-    /// Update category.
-    /// 
-    /// * `category` - category to update (with updated data)
-    fn update_category(&self, category: EncryptedCategory) -> Result<()>;
-
     /// Remove category if possible.
     /// 
     /// If there is at leas one transaction and/or plan with the specified
@@ -185,11 +177,6 @@ pub trait DataStorage {
     /// 
     /// * `plan` - protected plan data
     fn add_plan(&self, plan: EncryptedPlan) -> Result<()>;
-
-    /// Update plan.
-    /// 
-    /// * `plan` - plan to update (with updated data)
-    fn update_plan(&self, plan: EncryptedPlan) -> Result<()>;
 
     /// Remove plan.
     /// 

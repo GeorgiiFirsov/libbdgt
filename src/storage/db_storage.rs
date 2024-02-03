@@ -3,7 +3,7 @@ use crate::error::{Result, Error};
 use crate::datetime::Timestamp;
 use super::data::{EncryptedTransaction, EncryptedCategory, EncryptedAccount, EncryptedPlan, Id, CategoryType, MetaInfo};
 use super::storage::DataStorage;
-use super::{CONSISTENCY_VIOLATION, CANNOT_DELETE_PREDEFINED, CANNOT_MODIFY_PREDEFINED};
+use super::{CONSISTENCY_VIOLATION, CANNOT_DELETE_PREDEFINED};
 
 
 /// Name of DB file.
@@ -261,6 +261,11 @@ impl DataStorage for DbStorage {
     }
 
     fn update_account(&self, account: EncryptedAccount) -> Result<()> {
+        //
+        // For now I don't set _change_timestamp here
+        // It is reserved for future use
+        //
+
         let statement_fmt = r#"
             UPDATE accounts
                SET name = ?1,
@@ -344,26 +349,6 @@ impl DataStorage for DbStorage {
         Ok(())
     }
 
-    fn update_category(&self, category: EncryptedCategory) -> Result<()> {
-        if Self::is_predefined_category(category.id.unwrap()) {
-            return Err(Error::from_message(CANNOT_MODIFY_PREDEFINED));
-        }
-
-        let statement_fmt = r#"
-            UPDATE categories
-               SET name = ?1,
-                   type = ?2
-             WHERE category_id = ?3 AND 
-                   _removal_timestamp IS NULL
-        "#;
-
-        self.db
-            .execute(statement_fmt, rusqlite::params![category.name, 
-                category.category_type, category.id])?;
-
-        Ok(())
-    }
-
     fn remove_category(&self, category: Id, removal_timestamp: Timestamp) -> Result<()> {
         //
         // Check if no transactions and plans reference this category
@@ -442,23 +427,6 @@ impl DataStorage for DbStorage {
             Some(id) => self.db.execute(statement_fmt, rusqlite::params![id, plan.category_id, 
                 plan.name, plan.amount_limit, plan.meta_info.added_timestamp])?
         };
-
-        Ok(())
-    }
-
-    fn update_plan(&self, plan: EncryptedPlan) -> Result<()> {
-        let statement_fmt = r#"
-            UPDATE plans
-               SET category_id = ?1,
-                   name = ?2,
-                   amount_limit = ?3
-             WHERE plan_id = ?4 AND 
-                   _removal_timestamp IS NULL
-        "#;
-
-        self.db
-            .execute(statement_fmt, rusqlite::params![plan.category_id, 
-                plan.name, plan.amount_limit, plan.id])?;
 
         Ok(())
     }
