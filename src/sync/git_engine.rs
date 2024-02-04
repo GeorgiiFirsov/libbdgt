@@ -19,10 +19,10 @@ const FETCH_REF_NAME: &str = "FETCH_HEAD";
 const BRANCH_NAME: &str = "main";
 
 /// Name of configuration parameter that contains a username.
-const CFG_NAME: &str = "name";
+const CFG_NAME: &str = "user.name";
 
 /// Name of configuration parameter that contains an email.
-const CFG_EMAIL: &str = "email";
+const CFG_EMAIL: &str = "user.email";
 
 /// Synchronization folder.
 const SYNC_FORDER: &str = "sync";
@@ -53,9 +53,6 @@ pub struct GitSyncEngine {
 
     /// Path to last sync timestamp file.
     last_sync_path: std::path::PathBuf,
-
-    /// Default git configuration.
-    config: git2::Config,
 
     /// Default authenticator
     /// Usually it is used with `config`
@@ -111,11 +108,10 @@ impl GitSyncEngine {
         let repo_path = Self::sync_repo_path(loc);
         let last_sync_path = Self::sync_last_sync_path(loc);
 
-        Ok(GitSyncEngine { 
+        Ok(GitSyncEngine {
             repo: git2::Repository::open(&repo_path)?,
             repo_path: repo_path,
             last_sync_path: last_sync_path,
-            config: git2::Config::open_default()?,
             authenticator: auth_git2::GitAuthenticator::default(),
         })
     }
@@ -204,8 +200,9 @@ impl GitSyncEngine {
         // Fetch remote changes
         //
 
+        let config = self.repo.config()?;
         let mut fetch_options = git2::FetchOptions::default();
-        fetch_options.remote_callbacks(self.remote_callbacks());
+        fetch_options.remote_callbacks(self.remote_callbacks(&config));
 
         self.repo.find_remote(REMOTE_NAME)
             .and_then(|mut remote| remote.fetch(&[BRANCH_NAME], Some(&mut fetch_options), None))?;
@@ -284,8 +281,9 @@ impl GitSyncEngine {
     }
 
     fn push_remote(&self, branch_ref: &str) -> Result<()> {
+        let config = self.repo.config()?;
         let mut push_options = git2::PushOptions::default();
-        push_options.remote_callbacks(self.remote_callbacks());
+        push_options.remote_callbacks(self.remote_callbacks(&config));
 
         self.repo.find_remote(REMOTE_NAME)
             .and_then(|mut remote| remote.push(&[branch_ref], Some(&mut push_options)))
@@ -316,8 +314,11 @@ impl GitSyncEngine {
         // Create commit changes and author
         //
 
-        let name = self.config.get_str(CFG_NAME)?;
-        let email = self.config.get_str(CFG_EMAIL)?;
+        let mut config = self.repo.config()?;
+        let config = config.snapshot()?;
+
+        let name = config.get_str(CFG_NAME)?;
+        let email = config.get_str(CFG_EMAIL)?;
         let signature = git2::Signature::now(name, email)?;
 
         //
@@ -352,12 +353,12 @@ impl GitSyncEngine {
         Ok(branch_ref)
     }
 
-    fn remote_callbacks(&self) -> git2::RemoteCallbacks {
+    fn remote_callbacks<'a>(&'a self, config: &'a git2::Config) -> git2::RemoteCallbacks {
         let mut callbacks = git2::RemoteCallbacks::new();
 
         callbacks.credentials(
             self.authenticator
-                .credentials(&self.config)
+                .credentials(config)
         );
 
         callbacks
