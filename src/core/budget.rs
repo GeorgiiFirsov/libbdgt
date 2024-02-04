@@ -560,6 +560,12 @@ where
     fn export_local_changes(&self, last_sync: &Timestamp) -> Result<Changelog> {
         let mut local_changelog = Changelog::new();
 
+        //
+        // I don't filter out "foreign" items, because it is assumed, that
+        // there are none of them since this instance has not been synced
+        // during the interval (last_sync, now]
+        //
+
         local_changelog.accounts.added = self.accounts_added_since(*last_sync)?;
         local_changelog.accounts.changed = self.accounts_changed_since(*last_sync)?;
         local_changelog.accounts.removed = self.accounts_removed_since(*last_sync)?;
@@ -590,7 +596,8 @@ where
 
         self.merge_step(&changelog.accounts.added,
             |account| {
-                account.meta_info.added_timestamp.unwrap().ge(last_sync) 
+                account.meta_info.added_timestamp.unwrap().ge(last_sync) &&
+                account.meta_info.origin != self.instance_id().into_bytes()
             }, 
             |account| {
                 //
@@ -607,21 +614,24 @@ where
 
         self.merge_step(&changelog.categories.added,
             |category| {
-                category.meta_info.added_timestamp.unwrap().ge(last_sync)
+                category.meta_info.added_timestamp.unwrap().ge(last_sync) &&
+                category.meta_info.origin != self.instance_id().into_bytes()
             },
             |category| { self.add_category(category) }
         )?;
 
         self.merge_step(&changelog.plans.added,
             |plan| {
-                plan.meta_info.added_timestamp.unwrap().ge(last_sync)
+                plan.meta_info.added_timestamp.unwrap().ge(last_sync) &&
+                plan.meta_info.origin != self.instance_id().into_bytes()
             }, 
             |plan| { self.add_plan(plan) }
         )?;
 
         self.merge_step(&changelog.transactions.added,
             |transaction| {
-                transaction.meta_info.added_timestamp.unwrap().ge(last_sync)
+                transaction.meta_info.added_timestamp.unwrap().ge(last_sync) &&
+                transaction.meta_info.origin != self.instance_id().into_bytes()
             },
             |transaction| { self.add_transaction(transaction) }
         )?;
@@ -638,7 +648,8 @@ where
 
         self.merge_step(&changelog.transactions.removed,
             |transaction| {
-                transaction.meta_info.removed_timestamp.unwrap().ge(last_sync)
+                transaction.meta_info.removed_timestamp.unwrap().ge(last_sync) &&
+                transaction.meta_info.origin != self.instance_id().into_bytes()
             },
             |transaction| {
                 self.remove_transaction(transaction.id.unwrap(), false,
@@ -648,7 +659,8 @@ where
 
         self.merge_step(&changelog.plans.removed,
             |plan| {
-                plan.meta_info.removed_timestamp.unwrap().ge(last_sync)
+                plan.meta_info.removed_timestamp.unwrap().ge(last_sync) &&
+                plan.meta_info.origin != self.instance_id().into_bytes()
             },
             |plan| {
                 self.remove_plan(plan.id.unwrap(), plan.meta_info.removed_timestamp.unwrap())
@@ -657,7 +669,8 @@ where
 
         self.merge_step(&changelog.categories.removed,
             |category| {
-                category.meta_info.removed_timestamp.unwrap().ge(last_sync)
+                category.meta_info.removed_timestamp.unwrap().ge(last_sync) &&
+                category.meta_info.origin != self.instance_id().into_bytes()
             },
             |category| {
                 self.remove_category(category.id.unwrap(), category.meta_info.removed_timestamp.unwrap())
@@ -666,7 +679,8 @@ where
 
         self.merge_step(&changelog.accounts.removed,
             |account| {
-                account.meta_info.removed_timestamp.unwrap().ge(last_sync)
+                account.meta_info.removed_timestamp.unwrap().ge(last_sync) &&
+                account.meta_info.origin != self.instance_id().into_bytes()
             },
             |account| {
                 self.remove_account(account.id.unwrap(), false,
