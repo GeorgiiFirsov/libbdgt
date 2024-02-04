@@ -90,23 +90,25 @@ impl DataStorage for DbStorage {
     fn add_transaction(&self, transaction: EncryptedTransaction) -> Result<()> {
         let statement_fmt = match transaction.id {
             None => r#"
-                INSERT INTO transactions (timestamp, description, account_id, category_id, amount, _creation_timestamp)
-                VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+                INSERT INTO transactions (timestamp, description, account_id, category_id, amount, _origin, _creation_timestamp)
+                VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
             "#,
             Some(_) => r#"
-                INSERT INTO transactions (transaction_id, timestamp, description, account_id, category_id, amount, _creation_timestamp)
-                VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+                INSERT INTO transactions (transaction_id, timestamp, description, account_id, category_id, amount, _origin, _creation_timestamp)
+                VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
             "#
         };
         
         match transaction.id {
             None => self.db.execute(statement_fmt, 
                 rusqlite::params![transaction.timestamp, transaction.description, transaction.account_id, 
-                    transaction.category_id, transaction.amount, transaction.meta_info.added_timestamp])?,
+                    transaction.category_id, transaction.amount, transaction.meta_info.origin, 
+                    transaction.meta_info.added_timestamp])?,
                 
             Some(id) => self.db.execute(statement_fmt, 
                 rusqlite::params![id, transaction.timestamp, transaction.description, transaction.account_id, 
-                    transaction.category_id, transaction.amount, transaction.meta_info.added_timestamp])?
+                    transaction.category_id, transaction.amount, transaction.meta_info.origin,
+                    transaction.meta_info.added_timestamp])?
         };
 
         Ok(())
@@ -269,21 +271,23 @@ impl DataStorage for DbStorage {
     fn add_account(&self, account: EncryptedAccount) -> Result<()> {
         let statement_fmt = match account.id {
             None => r#"
-                INSERT INTO accounts (name, balance, initial_balance, _creation_timestamp)
-                VALUES (?1, ?2, ?3, ?4)
+                INSERT INTO accounts (name, balance, initial_balance, _origin, _creation_timestamp)
+                VALUES (?1, ?2, ?3, ?4, ?5)
             "#,
             Some(_) => r#"
-                INSERT INTO accounts (account_id, name, balance, initial_balance, _creation_timestamp)
-                VALUES (?1, ?2, ?3, ?4, ?5)
+                INSERT INTO accounts (account_id, name, balance, initial_balance, _origin, _creation_timestamp)
+                VALUES (?1, ?2, ?3, ?4, ?5, ?6)
             "#
         };
 
         match account.id {
             None => self.db.execute(statement_fmt, rusqlite::params![account.name, 
-                account.balance, account.initial_balance, account.meta_info.added_timestamp])?,
+                account.balance, account.initial_balance, account.meta_info.origin,
+                account.meta_info.added_timestamp])?,
 
             Some(id) => self.db.execute(statement_fmt, rusqlite::params![id, account.name, 
-                account.balance, account.initial_balance, account.meta_info.added_timestamp])?
+                account.balance, account.initial_balance, account.meta_info.origin,
+                account.meta_info.added_timestamp])?
         };
 
         Ok(())
@@ -386,22 +390,22 @@ impl DataStorage for DbStorage {
     fn add_category(&self, category: EncryptedCategory) -> Result<()> {
         let statement_fmt = match category.id {
             None => r#"
-                    INSERT INTO categories (name, type, _creation_timestamp)
-                    VALUES (?1, ?2, ?3)
+                    INSERT INTO categories (name, type, _origin, _creation_timestamp)
+                    VALUES (?1, ?2, ?3, ?4)
                 "#,
 
             Some(_) => r#"
-                    INSERT INTO categories (category_id, name, type, _creation_timestamp)
-                    VALUES (?1, ?2, ?3, ?4)
+                    INSERT INTO categories (category_id, name, type, _origin, _creation_timestamp)
+                    VALUES (?1, ?2, ?3, ?4, ?5)
                 "#
         };
 
         match category.id {
             None => self.db.execute(statement_fmt, rusqlite::params![category.name, 
-                category.category_type, category.meta_info.added_timestamp])?,
+                category.category_type, category.meta_info.origin, category.meta_info.added_timestamp])?,
 
             Some(id) => self.db.execute(statement_fmt, rusqlite::params![id, category.name, 
-                category.category_type, category.meta_info.added_timestamp])?
+                category.category_type, category.meta_info.origin, category.meta_info.added_timestamp])?
         };
 
         Ok(())
@@ -498,21 +502,21 @@ impl DataStorage for DbStorage {
     fn add_plan(&self, plan: EncryptedPlan) -> Result<()> {
         let statement_fmt = match plan.id {
             None => r#"
-                INSERT INTO plans (category_id, name, amount_limit, _creation_timestamp)
-                VALUES (?1, ?2, ?3, ?4)
+                INSERT INTO plans (category_id, name, amount_limit, _origin, _creation_timestamp)
+                VALUES (?1, ?2, ?3, ?4, ?5)
             "#,
             Some(_) => r#"
-                INSERT INTO plans (plan_id, category_id, name, amount_limit, _creation_timestamp)
-                VALUES (?1, ?2, ?3, ?4, ?5)
+                INSERT INTO plans (plan_id, category_id, name, amount_limit, _origin, _creation_timestamp)
+                VALUES (?1, ?2, ?3, ?4, ?5, ?6)
             "#
         };
 
         match plan.id {
             None => self.db.execute(statement_fmt, rusqlite::params![plan.category_id, 
-                plan.name, plan.amount_limit, plan.meta_info.added_timestamp])?,
+                plan.name, plan.amount_limit, plan.meta_info.origin, plan.meta_info.added_timestamp])?,
 
             Some(id) => self.db.execute(statement_fmt, rusqlite::params![id, plan.category_id, 
-                plan.name, plan.amount_limit, plan.meta_info.added_timestamp])?
+                plan.name, plan.amount_limit, plan.meta_info.origin, plan.meta_info.added_timestamp])?
         };
 
         Ok(())
@@ -638,6 +642,7 @@ impl DbStorage {
                 balance             BYTEA       NOT NULL,
                 initial_balance     BYTEA       NOT NULL,
                 name                BYTEA       NOT NULL,
+                _origin             BYTEA       NOT NULL,
                 _creation_timestamp DATETIME    NOT NULL,
                 _change_timestamp   DATETIME    NULL,
                 _removal_timestamp  DATETIME    NULL
@@ -656,6 +661,7 @@ impl DbStorage {
                 category_id         BLOB        PRIMARY KEY DEFAULT (randomblob(16)),
                 name                BYTEA       NOT NULL,
                 type                TINYINT     NOT NULL,
+                _origin             BYTEA       NOT NULL,
                 _creation_timestamp DATETIME    NOT NULL,
                 _change_timestamp   DATETIME    NULL,
                 _removal_timestamp  DATETIME    NULL
@@ -676,10 +682,11 @@ impl DbStorage {
             CREATE TABLE transactions (
                 transaction_id      BLOB        PRIMARY KEY DEFAULT (randomblob(16)),
                 timestamp           DATETIME    NOT NULL,
-                description         BYTEA       NOT NULL,    
+                description         BYTEA       NOT NULL,
                 account_id          BLOB        REFERENCES accounts(account_id),
                 category_id         BLOB        REFERENCES categories(category_id),
                 amount              BYTEA       NOT NULL,
+                _origin             BYTEA       NOT NULL,
                 _creation_timestamp DATETIME    NOT NULL,
                 _change_timestamp   DATETIME    NULL,
                 _removal_timestamp  DATETIME    NULL
@@ -702,6 +709,7 @@ impl DbStorage {
                 category_id         BLOB        REFERENCES categories(category_id),
                 name                BYTEA       NOT NULL,
                 amount_limit        BYTEA       NOT NULL,
+                _origin             BYTEA       NOT NULL,
                 _creation_timestamp DATETIME    NOT NULL,
                 _change_timestamp   DATETIME    NULL,
                 _removal_timestamp  DATETIME    NULL
@@ -791,7 +799,8 @@ impl DbStorage {
             .map_or(String::new(), S::into);
 
         return format!(r#"
-            SELECT transaction_id, timestamp, description, account_id, category_id, amount, _creation_timestamp, _change_timestamp, _removal_timestamp
+            SELECT transaction_id, timestamp, description, account_id, category_id, amount, 
+                   _origin, _creation_timestamp, _change_timestamp, _removal_timestamp
               FROM transactions
                 {}
         "#, modifiers);
@@ -802,7 +811,7 @@ impl DbStorage {
             .map_or(String::new(), S::into);
 
         return format!(r#"
-            SELECT account_id, name, balance, initial_balance, _creation_timestamp, _change_timestamp, _removal_timestamp
+            SELECT account_id, name, balance, initial_balance, _origin, _creation_timestamp, _change_timestamp, _removal_timestamp
               FROM accounts
                 {}
         "#, modifiers);
@@ -813,7 +822,7 @@ impl DbStorage {
             .map_or(String::new(), S::into);
 
         return format!(r#"
-            SELECT category_id, name, type, _creation_timestamp, _change_timestamp, _removal_timestamp
+            SELECT category_id, name, type, _origin, _creation_timestamp, _change_timestamp, _removal_timestamp
               FROM categories
                 {}
         "#, modifiers);
@@ -824,7 +833,7 @@ impl DbStorage {
             .map_or(String::new(), S::into);
 
         return format!(r#"
-            SELECT plan_id, category_id, name, amount_limit, _creation_timestamp, _change_timestamp, _removal_timestamp
+            SELECT plan_id, category_id, name, amount_limit, _origin, _creation_timestamp, _change_timestamp, _removal_timestamp
               FROM plans
                 {}
         "#, modifiers);
@@ -835,9 +844,10 @@ impl DbStorage {
 impl DbStorage {
     fn category_from_row(row: &rusqlite::Row<'_>) -> Result<EncryptedCategory> {
         let meta_info = MetaInfo {
-            added_timestamp: row.get(3)?,
-            changed_timestamp: row.get(4)?,
-            removed_timestamp: row.get(5)?
+            origin: row.get(3)?,
+            added_timestamp: row.get(4)?,
+            changed_timestamp: row.get(5)?,
+            removed_timestamp: row.get(6)?
         };
 
         Ok(EncryptedCategory { 
@@ -850,9 +860,10 @@ impl DbStorage {
 
     fn account_from_row(row: &rusqlite::Row<'_>) -> Result<EncryptedAccount> {
         let meta_info = MetaInfo {
-            added_timestamp: row.get(4)?,
-            changed_timestamp: row.get(5)?,
-            removed_timestamp: row.get(6)?
+            origin: row.get(4)?,
+            added_timestamp: row.get(5)?,
+            changed_timestamp: row.get(6)?,
+            removed_timestamp: row.get(7)?
         };
 
         Ok(EncryptedAccount { 
@@ -866,9 +877,10 @@ impl DbStorage {
 
     fn transaction_from_row(row: &rusqlite::Row<'_>) -> Result<EncryptedTransaction> {
         let meta_info = MetaInfo {
-            added_timestamp: row.get(6)?,
-            changed_timestamp: row.get(7)?,
-            removed_timestamp: row.get(8)?
+            origin: row.get(6)?,
+            added_timestamp: row.get(7)?,
+            changed_timestamp: row.get(8)?,
+            removed_timestamp: row.get(9)?
         };
 
         Ok(EncryptedTransaction { 
@@ -884,9 +896,10 @@ impl DbStorage {
 
     fn plan_from_row(row: &rusqlite::Row<'_>) -> Result<EncryptedPlan> {
         let meta_info = MetaInfo {
-            added_timestamp: row.get(4)?,
-            changed_timestamp: row.get(5)?,
-            removed_timestamp: row.get(6)?
+            origin: row.get(4)?,
+            added_timestamp: row.get(5)?,
+            changed_timestamp: row.get(6)?,
+            removed_timestamp: row.get(7)?
         };
 
         Ok(EncryptedPlan {

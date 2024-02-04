@@ -7,6 +7,9 @@ pub trait Syncable {
     /// Type of serialization context.
     type Context;
 
+    /// Type of instance identifier representation.
+    type InstanceId : std::fmt::Display;
+
     /// Merges remote changelog and exports the local one.
     ///
     /// * `timestamp_rw` - last synchronization time (the function overwrites

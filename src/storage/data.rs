@@ -1,5 +1,6 @@
 use serde::{Serialize, Deserialize};
 
+use crate::core::InstanceId;
 use crate::datetime::Timestamp;
 
 
@@ -28,6 +29,9 @@ pub enum CategoryType {
 /// Meta information about an entity
 #[derive(Serialize, Deserialize, Clone, Copy)]
 pub struct MetaInfo {
+    // Origin (instance, where an object was created)
+    pub origin: [u8; 16],
+
     // Creation timestamp
     pub added_timestamp: Option<Timestamp>,
     
@@ -39,21 +43,18 @@ pub struct MetaInfo {
 }
 
 
-impl Default for MetaInfo {
-    fn default() -> Self {
-        MetaInfo::new(None, None, None)
-    }
-}
-
-
 impl MetaInfo {
     /// Constructs a meta info instance with given timestamps.
     /// 
+    /// * `origin` - identifer of an instance, which item was created on
     /// * `added_timestamp` - creation timestamp or `None`
     /// * `changed_timestamp` - change timestamp or `None`
     /// * `removed_timestamp` - removal timestamp or `None`
-    pub fn new(added_timestamp: Option<Timestamp>, changed_timestamp: Option<Timestamp>, removed_timestamp: Option<Timestamp>) -> Self {
+    pub fn new(origin: &InstanceId, added_timestamp: Option<Timestamp>, 
+        changed_timestamp: Option<Timestamp>, removed_timestamp: Option<Timestamp>) -> Self 
+    {
         MetaInfo {
+            origin: origin.into_bytes(),
             added_timestamp, 
             changed_timestamp, 
             removed_timestamp

@@ -11,7 +11,7 @@ const INSTANCE_IDENTIFIER_FILE: &str = "instance";
 
 
 /// Type of local bdgt instance identifier.
-pub type InstanceId = String;
+pub type InstanceId = uuid::Uuid;
 
 
 /// App's instance configuration, contains long-term info.
@@ -38,7 +38,9 @@ where
     /// * `loc` - storage location provider
     pub fn open<L: Location>(loc: &L) -> Result<Self> {
         let raw_id = std::fs::read_to_string(Self::key_file(loc))?;
-        let instance_id = std::fs::read_to_string(Self::instance_file(loc))?;
+        
+        let instance_id = std::fs::read(Self::instance_file(loc))?;
+        let instance_id = uuid::Uuid::from_slice(&instance_id)?;
 
         Ok(Config { 
             key_id: Ce::KeyId::from_str(raw_id.as_str()),
@@ -106,10 +108,6 @@ where
     Ce::KeyId: KeyIdentifier
 {
     fn new_instance() -> InstanceId {
-        let mut buffer = uuid::Uuid::encode_buffer();
         uuid::Uuid::new_v4()
-            .hyphenated()
-            .encode_lower(&mut buffer)
-            .to_owned()
     }
 }

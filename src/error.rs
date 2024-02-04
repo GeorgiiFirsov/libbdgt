@@ -94,4 +94,5 @@ implement_from_error!(
     scrypt::errors::InvalidOutputLen,
     flexbuffers::DeserializationError,
     flexbuffers::SerializationError,
+    uuid::Error,
 );

@@ -117,7 +117,7 @@ impl GitSyncEngine {
 
 
 impl SyncEngine for GitSyncEngine {
-    fn perform_sync<S: Syncable>(&self, current_instance: &str, syncable: &S, context: &S::Context) -> Result<()> {
+    fn perform_sync<S: Syncable>(&self, current_instance: &S::InstanceId, syncable: &S, context: &S::Context) -> Result<()> {
         //
         // Get all changes from remote and open raw files
         //

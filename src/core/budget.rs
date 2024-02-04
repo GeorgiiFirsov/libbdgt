@@ -104,18 +104,20 @@ where
         // Predefined items creation timestamp is always equal to January 1970
         //
 
+        let origin = self.instance_id();
+
         self.add_category(&Category { 
             id: Some(St::TRANSFER_INCOME_ID), 
             name: TRANSFER_INCOME_CAT_NAME.to_owned(), 
             category_type: CategoryType::Income,
-            meta_info: MetaInfo::new(Some(*JANUARY_1970), None, None)
+            meta_info: MetaInfo::new(origin, Some(*JANUARY_1970), None, None)
         })?;
 
         self.add_category(&Category { 
             id: Some(St::TRANSFER_OUTCOME_ID), 
             name: TRANSFER_OUTCOME_CAT_NAME.to_owned(),
             category_type: CategoryType::Outcome,
-            meta_info: MetaInfo::new(Some(*JANUARY_1970), None, None)
+            meta_info: MetaInfo::new(origin, Some(*JANUARY_1970), None, None)
         })
     }
 
@@ -158,8 +160,15 @@ where
     /// * `from_account` - account to transfer from
     /// * `to_account` - account to transfer to
     pub fn add_transfer(&self, amount: isize, from_account: Id, to_account: Id) -> Result<()> {
+        //
+        // Transfer can be added only locally, i.e. when syncronization is performed, no notion
+        // of transfer exists. Only corresponding transactions are synchronized.
+        // Hence, all meta information is filled using reasonable default values.
+        //
+
         let amount = amount.abs();
         let timestamp = Clock::now();
+        let origin = self.instance_id();
 
         self.add_transaction(&Transaction{
             id: None,
@@ -168,7 +177,7 @@ where
             account_id: to_account,
             category_id: St::TRANSFER_INCOME_ID,
             amount: amount,
-            meta_info: MetaInfo::new(Some(timestamp), None, None)
+            meta_info: MetaInfo::new(origin, Some(timestamp), None, None)
         })?;
 
         self.add_transaction(&Transaction{
@@ -178,7 +187,7 @@ where
             account_id: from_account,
             category_id: St::TRANSFER_OUTCOME_ID,
             amount: -amount,
-            meta_info: MetaInfo::new(Some(timestamp), None, None)
+            meta_info: MetaInfo::new(origin, Some(timestamp), None, None)
         })?;
 
         Ok(())
@@ -435,6 +444,8 @@ where
 {
     type Context = CryptoBuffer;
 
+    type InstanceId = InstanceId;
+
     fn merge_and_export_changes<Ts, Li, Cl>(&self, timestamp_rw: &mut Ts, last_instance_rw: &mut Li, 
         changelog_rw: &mut Cl, last_sync: &Timestamp, auth: &Self::Context) -> Result<()>
     where
@@ -526,22 +537,22 @@ where
     }
 
     fn read_instance<R: std::io::Read>(last_instance_reader: &mut R) -> Result<InstanceId> {
-        let mut instance = InstanceId::new();
-        last_instance_reader.read_to_string(&mut instance)?;
+        let mut buffer = [0; 16];
+        last_instance_reader.read_exact(&mut buffer)?;
 
-        Ok(instance)
+        Ok(uuid::Uuid::from_bytes(buffer))
     }
 
     fn write_instance<W: std::io::Write>(instance: &InstanceId, last_instance_writer: &mut W) -> Result<()> {
         last_instance_writer
-            .write_all(instance.as_bytes())
+            .write_all(&instance.into_bytes())
             .map_err(Error::from)
     }
 
     fn make_key_derivation_salt(timestamp: &Timestamp, instance: &InstanceId) -> Result<CryptoBuffer> {
         let mut salt = Vec::new();
         salt.write_all(&timestamp.timestamp().to_le_bytes())?;
-        salt.write_all(instance.as_bytes())?;
+        salt.write_all(&instance.into_bytes())?;
 
         Ok(CryptoBuffer::from(salt))
     }
