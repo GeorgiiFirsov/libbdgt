@@ -433,6 +433,14 @@ where
 
         self.clean_removed()
     }
+
+    /// Replaces an existsing remote URL with a new one.
+    /// 
+    /// * `remote` - new remote URL
+    pub fn set_remote_url(&self, remote: &str) -> Result<()> {
+        self.sync_engine
+            .change_remote(remote)
+    }
 }
 
 
