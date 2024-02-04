@@ -457,32 +457,42 @@ where
     fn merge_and_export_changes<Ts, Li, Cl>(&self, timestamp_rw: &mut Ts, last_instance_rw: &mut Li, 
         changelog_rw: &mut Cl, last_sync: &Timestamp, auth: &Self::Context) -> Result<()>
     where
-        Ts: std::io::Read + std::io::Write,
-        Li: std::io::Read + std::io::Write,
-        Cl: std::io::Read + std::io::Write 
+        Ts: std::io::Read + std::io::Write + std::io::Seek,
+        Li: std::io::Read + std::io::Write + std::io::Seek,
+        Cl: std::io::Read + std::io::Write + std::io::Seek
     {
-        //
-        // Read remote timestamp and instance identifiers to derive decryption key
-        //
+        let mut cumulative_changelog = if Self::empty_sync_files(timestamp_rw, last_instance_rw, changelog_rw)? {
+            //
+            // Files are correct, but empty
+            // Just return empty changelog
+            //
 
-        let remote_timestamp = Self::read_timestamp(timestamp_rw)?;
-        let remote_instance = Self::read_instance(last_instance_rw)?;
+            Changelog::new()
+        }
+        else {
+            //
+            // Read remote timestamp and instance identifiers to derive decryption key
+            //
 
-        let remote_salt = Self::make_key_derivation_salt(&remote_timestamp, &remote_instance)?;
-        let decryption_key = Kdf::derive_key(auth.as_bytes(), remote_salt.as_bytes(), 
-            self.crypto_engine.symmetric_key_length())?;
+            let remote_timestamp = Self::read_timestamp(timestamp_rw)?;
+            let remote_instance = Self::read_instance(last_instance_rw)?;
 
-        //
-        // Read and decrypt changelog
-        //
+            let remote_salt = Self::make_key_derivation_salt(&remote_timestamp, &remote_instance)?;
+            let decryption_key = Kdf::derive_key(auth.as_bytes(), remote_salt.as_bytes(), 
+                self.crypto_engine.symmetric_key_length())?;
 
-        let mut remote_changelog = Vec::new();
-        changelog_rw.read_to_end(&mut remote_changelog)?;
+            //
+            // Read and decrypt changelog
+            //
 
-        let remote_changelog = self.crypto_engine
-            .decrypt_symmetric(decryption_key.as_bytes(), &remote_changelog)?;
+            let mut remote_changelog = Vec::new();
+            changelog_rw.read_to_end(&mut remote_changelog)?;
 
-        let mut cumulative_changelog = Changelog::from_slice(remote_changelog.as_bytes())?;
+            let remote_changelog = self.crypto_engine
+                .decrypt_symmetric(decryption_key.as_bytes(), &remote_changelog)?;
+
+            Changelog::from_slice(remote_changelog.as_bytes())?
+        };
 
         //
         // Merge remote and export local changes
@@ -523,6 +533,35 @@ where
     Se: SyncEngine,
     St: DataStorage
 {
+    fn empty_sync_files<Ts, Li, Cl>(timestamp: &mut Ts, last_instance: &mut Li, changelog: &mut Cl) -> Result<bool>
+    where
+        Ts: std::io::Seek,
+        Li: std::io::Seek,
+        Cl: std::io::Seek 
+    {
+        let seek_position = std::io::SeekFrom::End(0);
+
+        let timestamp_size = timestamp.seek(seek_position)?;
+        timestamp.rewind()?;
+
+        let last_instance_size = last_instance.seek(seek_position)?;
+        last_instance.rewind()?;
+
+        let changelog_size = changelog.seek(seek_position)?;
+        changelog.rewind()?;
+
+        //
+        // Either all files are, or timestamp and last instanse are not.
+        // Otherwise, files are considered malformed
+        //
+
+        match (timestamp_size, last_instance_size, changelog_size) {
+            (0, 0, 0) => return Ok(true),
+            (1.., 1.., _) => return Ok(false),
+            _ => return Err(Error::from_message("msg"))
+        };
+    }
+
     fn read_timestamp<R: std::io::Read>(timestamp_reader: &mut R) -> Result<Timestamp> {
         let mut buffer = [0; std::mem::size_of::<i64>()];
         let seconds = match timestamp_reader.read_exact(&mut buffer) {

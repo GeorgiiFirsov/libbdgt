@@ -23,7 +23,7 @@ pub trait Syncable {
     fn merge_and_export_changes<Ts, Li, Cl>(&self, timestamp_rw: &mut Ts, last_instance_rw: &mut Li,
         changelog_rw: &mut Cl, last_sync: &Timestamp, context: &Self::Context) -> Result<()>
     where
-        Ts: std::io::Read + std::io::Write,
-        Li: std::io::Read + std::io::Write,
-        Cl: std::io::Read + std::io::Write;
+        Ts: std::io::Read + std::io::Write + std::io::Seek,
+        Li: std::io::Read + std::io::Write + std::io::Seek,
+        Cl: std::io::Read + std::io::Write + std::io::Seek;
 }
