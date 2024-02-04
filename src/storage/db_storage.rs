@@ -242,7 +242,7 @@ impl DataStorage for DbStorage {
     fn transactions_added_since(&self, base: Timestamp) -> Result<Vec<EncryptedTransaction>> {
         let statement_fmt = Self::select_from_transactions(Some(r#"
             WHERE _creation_timestamp > ?1
-            ORDER BY timestamp DESC
+            ORDER BY _creation_timestamp DESC
         "#));
 
         self.query_with_params(statement_fmt, rusqlite::params![base], Self::transaction_from_row)
@@ -252,7 +252,7 @@ impl DataStorage for DbStorage {
         let statement_fmt = Self::select_from_transactions(Some(r#"
             WHERE _change_timestamp IS NOT NULL AND
                   _change_timestamp > ?1
-            ORDER BY timestamp DESC
+            ORDER BY _change_timestamp DESC
         "#));
 
         self.query_with_params(statement_fmt, rusqlite::params![base], Self::transaction_from_row)
@@ -262,7 +262,7 @@ impl DataStorage for DbStorage {
         let statement_fmt = Self::select_from_transactions(Some(r#"
             WHERE _removal_timestamp IS NOT NULL AND
                   _removal_timestamp > ?1
-            ORDER BY timestamp DESC
+            ORDER BY _removal_timestamp DESC
         "#));
 
         self.query_with_params(statement_fmt, rusqlite::params![base], Self::transaction_from_row)
@@ -361,7 +361,7 @@ impl DataStorage for DbStorage {
     fn accounts_added_since(&self, base: Timestamp) -> Result<Vec<EncryptedAccount>> {
         let statement_fmt = Self::select_from_accounts(Some(r#"
             WHERE _creation_timestamp > ?1
-            ORDER BY timestamp DESC
+            ORDER BY _creation_timestamp DESC
         "#));
 
         self.query_with_params(statement_fmt, rusqlite::params![base], Self::account_from_row)
@@ -371,7 +371,7 @@ impl DataStorage for DbStorage {
         let statement_fmt = Self::select_from_accounts(Some(r#"
             WHERE _change_timestamp IS NOT NULL AND
                   _change_timestamp > ?1
-            ORDER BY timestamp DESC
+            ORDER BY _change_timestamp DESC
         "#));
 
         self.query_with_params(statement_fmt, rusqlite::params![base], Self::account_from_row)
@@ -381,7 +381,7 @@ impl DataStorage for DbStorage {
         let statement_fmt = Self::select_from_accounts(Some(r#"
             WHERE _removal_timestamp IS NOT NULL AND
                   _removal_timestamp > ?1
-            ORDER BY timestamp DESC
+            ORDER BY _removal_timestamp DESC
         "#));
 
         self.query_with_params(statement_fmt, rusqlite::params![base], Self::account_from_row)
@@ -473,7 +473,7 @@ impl DataStorage for DbStorage {
     fn categories_added_since(&self, base: Timestamp) -> Result<Vec<EncryptedCategory>> {
         let statement_fmt = Self::select_from_categories(Some(r#"
             WHERE _creation_timestamp > ?1
-            ORDER BY timestamp DESC
+            ORDER BY _creation_timestamp DESC
         "#));
 
         self.query_with_params(statement_fmt, rusqlite::params![base], Self::category_from_row)
@@ -483,7 +483,7 @@ impl DataStorage for DbStorage {
         let statement_fmt = Self::select_from_categories(Some(r#"
             WHERE _change_timestamp IS NOT NULL AND
                   _change_timestamp > ?1
-            ORDER BY timestamp DESC
+            ORDER BY _change_timestamp DESC
         "#));
 
         self.query_with_params(statement_fmt, rusqlite::params![base], Self::category_from_row)
@@ -493,7 +493,7 @@ impl DataStorage for DbStorage {
         let statement_fmt = Self::select_from_categories(Some(r#"
             WHERE _removal_timestamp IS NOT NULL AND
                   _removal_timestamp > ?1
-            ORDER BY timestamp DESC
+            ORDER BY _removal_timestamp DESC
         "#));
 
         self.query_with_params(statement_fmt, rusqlite::params![base], Self::category_from_row)
@@ -572,7 +572,7 @@ impl DataStorage for DbStorage {
     fn plans_added_since(&self, base: Timestamp) -> Result<Vec<EncryptedPlan>> {
         let statement_fmt = Self::select_from_plans(Some(r#"
             WHERE _creation_timestamp > ?1
-            ORDER BY timestamp DESC
+            ORDER BY _creation_timestamp DESC
         "#));
 
         self.query_with_params(statement_fmt, rusqlite::params![base], Self::plan_from_row)
@@ -582,7 +582,7 @@ impl DataStorage for DbStorage {
         let statement_fmt = Self::select_from_plans(Some(r#"
             WHERE _change_timestamp IS NOT NULL AND
                   _change_timestamp > ?1
-            ORDER BY timestamp DESC
+            ORDER BY _change_timestamp DESC
         "#));
 
         self.query_with_params(statement_fmt, rusqlite::params![base], Self::plan_from_row)
@@ -592,7 +592,7 @@ impl DataStorage for DbStorage {
         let statement_fmt = Self::select_from_plans(Some(r#"
             WHERE _removal_timestamp IS NOT NULL AND
                   _removal_timestamp > ?1
-            ORDER BY timestamp DESC
+            ORDER BY _removal_timestamp DESC
         "#));
 
         self.query_with_params(statement_fmt, rusqlite::params![base], Self::plan_from_row)
