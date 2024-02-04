@@ -56,6 +56,10 @@ pub struct GitSyncEngine {
 
     /// Default git configuration.
     config: git2::Config,
+
+    /// Default authenticator
+    /// Usually it is used with `config`
+    authenticator: auth_git2::GitAuthenticator,
 }
 
 
@@ -76,7 +80,8 @@ impl GitSyncEngine {
         let repo_path = Self::sync_repo_path(loc);
         match remote {
             Some(remote) => {
-                git2::Repository::clone(remote, repo_path)?
+                auth_git2::GitAuthenticator::default()
+                    .clone_repo(remote, repo_path)?
             }
             None => {
                 git2::Repository::init(repo_path)?
@@ -111,6 +116,7 @@ impl GitSyncEngine {
             repo_path: repo_path,
             last_sync_path: last_sync_path,
             config: git2::Config::open_default()?,
+            authenticator: auth_git2::GitAuthenticator::default(),
         })
     }
 }
@@ -198,8 +204,11 @@ impl GitSyncEngine {
         // Fetch remote changes
         //
 
+        let mut fetch_options = git2::FetchOptions::default();
+        fetch_options.remote_callbacks(self.remote_callbacks());
+
         self.repo.find_remote(REMOTE_NAME)
-            .and_then(|mut remote| remote.fetch(&[BRANCH_NAME], None, None))?;
+            .and_then(|mut remote| remote.fetch(&[BRANCH_NAME], Some(&mut fetch_options), None))?;
 
         let fetch_head = self.repo
             .find_reference(FETCH_REF_NAME)?;
@@ -275,8 +284,11 @@ impl GitSyncEngine {
     }
 
     fn push_remote(&self, branch_ref: &str) -> Result<()> {
+        let mut push_options = git2::PushOptions::default();
+        push_options.remote_callbacks(self.remote_callbacks());
+
         self.repo.find_remote(REMOTE_NAME)
-            .and_then(|mut remote| remote.push(&[branch_ref], None))
+            .and_then(|mut remote| remote.push(&[branch_ref], Some(&mut push_options)))
             .map_err(Error::from)
     }
 
@@ -338,6 +350,17 @@ impl GitSyncEngine {
             .to_owned();
 
         Ok(branch_ref)
+    }
+
+    fn remote_callbacks(&self) -> git2::RemoteCallbacks {
+        let mut callbacks = git2::RemoteCallbacks::new();
+
+        callbacks.credentials(
+            self.authenticator
+                .credentials(&self.config)
+        );
+
+        callbacks
     }
 }
 
