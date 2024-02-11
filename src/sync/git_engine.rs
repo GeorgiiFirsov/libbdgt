@@ -157,6 +157,7 @@ impl SyncEngine for GitSyncEngine {
         syncable.merge_and_export_changes(&mut timestamp_file, &mut last_instance_file, 
             &mut changelog_file, &Self::read_last_sync(&mut last_sync_file)?, context)?;
 
+        Self::prepare_for_overwrite(&mut last_sync_file)?;
         Self::write_last_sync(&mut last_sync_file, &Clock::now())?;
 
         //
@@ -207,8 +208,10 @@ impl GitSyncEngine {
         self.repo.find_remote(REMOTE_NAME)
             .and_then(|mut remote| remote.fetch(&[BRANCH_NAME], Some(&mut fetch_options), None))?;
 
-        let fetch_head = self.repo
-            .find_reference(FETCH_REF_NAME)?;
+        let fetch_head = match self.repo.find_reference(FETCH_REF_NAME) {
+            Ok(r) => r,
+            _ => return Ok(())  // Pulling an empty repository
+        };
 
         let fetch_commit = self.repo
             .reference_to_annotated_commit(&fetch_head)?;
@@ -385,6 +388,11 @@ impl GitSyncEngine {
 
         last_sync
             .write_all(&timestamp)
+            .map_err(Error::from)
+    }
+
+    fn prepare_for_overwrite<S: std::io::Seek>(s: &mut S) -> Result<()> {
+        s.rewind()
             .map_err(Error::from)
     }
 }

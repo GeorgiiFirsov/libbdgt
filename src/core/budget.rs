@@ -511,7 +511,10 @@ where
         let local_timestamp = Clock::now();
         let local_instance = self.instance_id();
 
+        Self::prepare_for_overwrite(timestamp_rw)?;
         Self::write_timestamp(&local_timestamp, timestamp_rw)?;
+
+        Self::prepare_for_overwrite(last_instance_rw)?;
         Self::write_instance(&local_instance, last_instance_rw)?;
 
         let local_salt = Self::make_key_derivation_salt(&local_timestamp, &local_instance)?;
@@ -521,6 +524,7 @@ where
         let cumulative_changelog = self.crypto_engine
             .encrypt_symmetric(encryption_key.as_bytes(), &cumulative_changelog.to_vec()?)?;
 
+        Self::prepare_for_overwrite(changelog_rw)?;
         changelog_rw.write_all(cumulative_changelog.as_bytes())?;
 
         Ok(())
@@ -593,6 +597,11 @@ where
     fn write_instance<W: std::io::Write>(instance: &InstanceId, last_instance_writer: &mut W) -> Result<()> {
         last_instance_writer
             .write_all(&instance.into_bytes())
+            .map_err(Error::from)
+    }
+
+    fn prepare_for_overwrite<S: std::io::Seek>(s: &mut S) -> Result<()> {
+        s.rewind()
             .map_err(Error::from)
     }
 
