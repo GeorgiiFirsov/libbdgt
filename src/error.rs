@@ -88,5 +88,11 @@ implement_from_error!(
     rusqlite::Error,
     std::io::Error,
     rand::Error,
-    aes_gcm::Error
+    aes_gcm::Error,
+    std::convert::Infallible,
+    git2::Error,
+    scrypt::errors::InvalidOutputLen,
+    flexbuffers::DeserializationError,
+    flexbuffers::SerializationError,
+    uuid::Error,
 );

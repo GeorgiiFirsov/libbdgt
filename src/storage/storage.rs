@@ -1,8 +1,24 @@
 use crate::error::Result;
-use super::data::{EncryptedTransaction, EncryptedCategory, EncryptedAccount, EncryptedPlan, Id, Timestamp, CategoryType};
+use crate::datetime::Timestamp;
+use super::data::{EncryptedTransaction, EncryptedCategory, EncryptedAccount, EncryptedPlan, Id, CategoryType};
 
 
 /// Storage trait, that provides protected data reading and writing.
+///
+/// For all data types supported by storage, there are several operations:
+///
+/// - creation operation. It writes creation timestamp from data meta
+///   information if present. Otherwise, an error is occurred.
+///
+/// - removal operation. It writes removal timestamp always.
+///
+/// - query operation. It does not update any timestamps, just reads all
+///   of them.
+/// 
+/// All [`None`] values as timestamps mean not to update corresponding
+/// timestamp in storage. I.e. if [`None`] is specified as change
+/// timestamp in update operation, then the opration will be performed,
+/// but change timestamp will not be updated.
 pub trait DataStorage {
     /// Predefined income transfer category identifier.
     const TRANSFER_INCOME_ID: Id;
@@ -13,12 +29,13 @@ pub trait DataStorage {
     /// Add a new transaction.
     /// 
     /// * `transaction` - protected transaction data
-    fn add_transaction(&self, transaction: EncryptedTransaction) -> Result<Id>;
+    fn add_transaction(&self, transaction: EncryptedTransaction) -> Result<()>;
 
     /// Remove transaction.
     /// 
     /// * `transaction` - identifier of a transaction to remove
-    fn remove_transaction(&self, transaction: Id) -> Result<()>;
+    /// * `removal_timestamp` - this value will be written as removal timestamp
+    fn remove_transaction(&self, transaction: Id, removal_timestamp: Timestamp) -> Result<()>;
 
     /// Return transaction with a given identifier.
     /// 
@@ -36,7 +53,7 @@ pub trait DataStorage {
     /// * `start_timestamp` - point in time to start from
     fn transactions_after(&self, start_timestamp: Timestamp) -> Result<Vec<EncryptedTransaction>>;
 
-    /// Return all transactions between a given time points (including start 
+    /// Return all transactions between given time points (including start 
     /// of the interval and excluding the end) sorted by timestamp in 
     /// descending order.
     /// 
@@ -63,7 +80,7 @@ pub trait DataStorage {
     /// * `start_timestamp` - point in time to start from
     fn transactions_of_after(&self, account: Id, start_timestamp: Timestamp) -> Result<Vec<EncryptedTransaction>>;
 
-    /// Return all transactions between a given time points (including start 
+    /// Return all transactions between given time points (including start 
     /// of the interval and excluding the end) bound with a given account 
     /// sorted by timestamp in descending order.
     /// 
@@ -91,7 +108,7 @@ pub trait DataStorage {
     /// * `start_timestamp` - point in time to start from
     fn transactions_with_after(&self, category: Id, start_timestamp: Timestamp) -> Result<Vec<EncryptedTransaction>>;
 
-    /// Return all transactions between a given time points (including start 
+    /// Return all transactions between given time points (including start 
     /// of the interval and excluding the end) and with given category 
     /// sorted by timestamp in descending order.
     /// 
@@ -102,10 +119,25 @@ pub trait DataStorage {
     /// * `end_timestamp` - point in time to end before
     fn transactions_with_between(&self, category: Id, start_timestamp: Timestamp, end_timestamp: Timestamp) -> Result<Vec<EncryptedTransaction>>;
 
+    /// Returns all transactions added to storage since a given time point.
+    /// 
+    /// * `base` - point in time. All transactions added strictly after this time point are returned.
+    fn transactions_added_since(&self, base: Timestamp) -> Result<Vec<EncryptedTransaction>>;
+
+    /// Returns all transactions changed in storage since a given time point.
+    /// 
+    /// * `base` - point in time. All transactions changed strictly after this time point are returned.
+    fn transactions_changed_since(&self, base: Timestamp) -> Result<Vec<EncryptedTransaction>>;
+
+    /// Returns all transactions removed from storage since a given time point.
+    /// 
+    /// * `base` - point in time. All transactions removed strictly after this time point are returned.
+    fn transactions_removed_since(&self, base: Timestamp) -> Result<Vec<EncryptedTransaction>>;
+
     /// Add a new account.
     /// 
     /// * `account` - protected account data
-    fn add_account(&self, account: EncryptedAccount) -> Result<Id>;
+    fn add_account(&self, account: EncryptedAccount) -> Result<()>;
 
     /// Update account.
     /// 
@@ -117,8 +149,8 @@ pub trait DataStorage {
     /// If account has transaction and `force` is false, then this function fails.
     /// 
     /// * `account` - identifier of an account to remove
-    /// * `force` - if true, then account is deleted anyway with all of its transactions
-    fn remove_account(&self, account: Id, force: bool) -> Result<()>;
+    /// * `removal_timestamp` - this value will be written as removal timestamp
+    fn remove_account(&self, account: Id, removal_timestamp: Timestamp) -> Result<()>;
 
     /// Return account with a given identifier.
     /// 
@@ -128,15 +160,25 @@ pub trait DataStorage {
     /// Return all accounts.
     fn accounts(&self) -> Result<Vec<EncryptedAccount>>;
 
+    /// Returns all accounts added to storage since a given time point.
+    /// 
+    /// * `base` - point in time. All accounts added strictly after this time point are returned.
+    fn accounts_added_since(&self, base: Timestamp) -> Result<Vec<EncryptedAccount>>;
+
+    /// Returns all accounts changed in storage since a given time point.
+    /// 
+    /// * `base` - point in time. All accounts changed strictly after this time point are returned.
+    fn accounts_changed_since(&self, base: Timestamp) -> Result<Vec<EncryptedAccount>>;
+
+    /// Returns all accounts removed from storage since a given time point.
+    /// 
+    /// * `base` - point in time. All accounts removed strictly after this time point are returned.
+    fn accounts_removed_since(&self, base: Timestamp) -> Result<Vec<EncryptedAccount>>;
+
     /// Add a new category.
     /// 
     /// * `category` - protected category data
-    fn add_category(&self, category: EncryptedCategory) -> Result<Id>;
-
-    /// Update category.
-    /// 
-    /// * `category` - category to update (with updated data)
-    fn update_category(&self, category: EncryptedCategory) -> Result<()>;
+    fn add_category(&self, category: EncryptedCategory) -> Result<()>;
 
     /// Remove category if possible.
     /// 
@@ -145,7 +187,8 @@ pub trait DataStorage {
     /// remove category with existing transactions and/or plans.
     /// 
     /// * `category` - identifier of category to remove
-    fn remove_category(&self, category: Id) -> Result<()>;
+    /// * `removal_timestamp` - this value will be written as removal timestamp
+    fn remove_category(&self, category: Id, removal_timestamp: Timestamp) -> Result<()>;
 
     /// Return category with a given identifier.
     /// 
@@ -160,20 +203,31 @@ pub trait DataStorage {
     /// * `category_type` - type to return categories of
     fn categories_of(&self, category_type: CategoryType) -> Result<Vec<EncryptedCategory>>;
 
+    /// Returns all categories added to storage since a given time point.
+    /// 
+    /// * `base` - point in time. All categories added strictly after this time point are returned.
+    fn categories_added_since(&self, base: Timestamp) -> Result<Vec<EncryptedCategory>>;
+
+    /// Returns all categories changed in storage since a given time point.
+    /// 
+    /// * `base` - point in time. All categories changed strictly after this time point are returned.
+    fn categories_changed_since(&self, base: Timestamp) -> Result<Vec<EncryptedCategory>>;
+
+    /// Returns all categories removed from storage since a given time point.
+    /// 
+    /// * `base` - point in time. All categories removed strictly after this time point are returned.
+    fn categories_removed_since(&self, base: Timestamp) -> Result<Vec<EncryptedCategory>>;
+
     /// Add a new plan.
     /// 
     /// * `plan` - protected plan data
-    fn add_plan(&self, plan: EncryptedPlan) -> Result<Id>;
-
-    /// Update plan.
-    /// 
-    /// * `plan` - plan to update (with updated data)
-    fn update_plan(&self, plan: EncryptedPlan) -> Result<()>;
+    fn add_plan(&self, plan: EncryptedPlan) -> Result<()>;
 
     /// Remove plan.
     /// 
     /// * `plan` - identifier of plan to remove
-    fn remove_plan(&self, plan: Id) -> Result<()>;
+    /// * `removal_timestamp` - this value will be written as removal timestamp
+    fn remove_plan(&self, plan: Id, removal_timestamp: Timestamp) -> Result<()>;
 
     /// Return plan with a given identifier.
     /// 
@@ -187,6 +241,21 @@ pub trait DataStorage {
     /// 
     /// * `category` - category to return plans for
     fn plans_for(&self, category: Id) -> Result<Vec<EncryptedPlan>>;
+
+    /// Returns all plans added to storage since a given time point.
+    /// 
+    /// * `base` - point in time. All plans added strictly after this time point are returned.
+    fn plans_added_since(&self, base: Timestamp) -> Result<Vec<EncryptedPlan>>;
+
+    /// Returns all plans changed in storage since a given time point.
+    /// 
+    /// * `base` - point in time. All plans changed strictly after this time point are returned.
+    fn plans_changed_since(&self, base: Timestamp) -> Result<Vec<EncryptedPlan>>;
+
+    /// Returns all plans removed from storage since a given time point.
+    /// 
+    /// * `base` - point in time. All plans removed strictly after this time point are returned.
+    fn plans_removed_since(&self, base: Timestamp) -> Result<Vec<EncryptedPlan>>;
 
     /// Delete permanently all previously removed items.
     /// 

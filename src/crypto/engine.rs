@@ -22,6 +22,10 @@ pub trait CryptoEngine {
     /// Returns a version of cryptographic engine.
     fn version(&self) -> &'static str;
 
+    /// Returns length of a key for symmetric algorithm,
+    /// that is used by the engine.
+    fn symmetric_key_length(&self) -> usize;
+
     /// Looks for a key with specific identifier in engine's key storage.
     /// 
     /// Key is returned if and only if it exists and is suitable for bdgt.

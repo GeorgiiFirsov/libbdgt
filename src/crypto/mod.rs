@@ -1,4 +1,5 @@
 mod key;
+mod kdf;
 mod prng;
 mod buffer;
 mod engine;
@@ -10,6 +11,7 @@ pub use self::buffer::CryptoBuffer;
 pub use self::gpg_engine::GpgCryptoEngine;
 pub use self::key::{Key, KeyId};
 
+pub(crate) use self::kdf::Kdf;
 pub(crate) use self::key::KeyIdentifier;
 
 

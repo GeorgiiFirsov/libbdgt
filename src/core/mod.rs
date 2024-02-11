@@ -1,7 +1,9 @@
 mod budget;
+mod config;
+mod changelog;
 
 pub use self::budget::Budget;
+pub use self::config::{Config, InstanceId};
 
-
-/// Error message appeared when a predefined item has unexpected identifier.
-const WRONG_PREDEFINED_IDENTIFIER: &str = "Wrong predefined item identifier";
+/// Error shown in case of malformed timestamp file.
+const MALFORMED_TIMESTAMP: &str = "Timestamp file in repository is malformed";
