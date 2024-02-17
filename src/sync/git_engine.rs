@@ -346,10 +346,18 @@ impl GitSyncEngine {
         //
 
         let commit = self.repo.find_commit(commit)?;
-        let branch = self.repo.branch(BRANCH_NAME, &commit, true)
-            .map(|b| b.into_reference())?;
+        self.update_branch_pointer(&commit)
+    }
 
-        let branch_ref = branch.name()
+    fn update_branch_pointer(&self, commit: &git2::Commit<'_>) -> Result<String> {
+        let branch = match self.repo.find_branch(BRANCH_NAME, git2::BranchType::Local) {
+            Ok(branch) => branch,
+            _ => self.repo.branch(BRANCH_NAME, commit, false)?
+        };
+        
+        let branch_ref = branch
+            .into_reference()
+            .name()
             .expect("Branch MUST have name")
             .to_owned();
 
