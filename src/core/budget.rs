@@ -159,7 +159,7 @@ where
     /// * `amount` - amount of money to transfer between accounts
     /// * `from_account` - account to transfer from
     /// * `to_account` - account to transfer to
-    pub fn add_transfer(&self, amount: isize, from_account: Id, to_account: Id) -> Result<()> {
+    pub fn add_transfer(&self, amount: isize, from_account: Id, to_account: Id, timestamp: Timestamp) -> Result<()> {
         //
         // Transfer can be added only locally, i.e. when syncronization is performed, no notion
         // of transfer exists. Only corresponding transactions are synchronized.
@@ -167,7 +167,6 @@ where
         //
 
         let amount = amount.abs();
-        let timestamp = Clock::now();
         let origin = self.instance_id();
 
         self.add_transaction(&Transaction{
