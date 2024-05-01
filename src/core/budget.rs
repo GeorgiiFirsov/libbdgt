@@ -104,20 +104,18 @@ where
         // Predefined items creation timestamp is always equal to January 1970
         //
 
-        let origin = self.instance_id();
-
         self.add_category(&Category { 
             id: Some(St::TRANSFER_INCOME_ID), 
             name: TRANSFER_INCOME_CAT_NAME.to_owned(), 
             category_type: CategoryType::Income,
-            meta_info: MetaInfo::new(origin, Some(*JANUARY_1970), None, None)
+            meta_info: MetaInfo::new(Some(*JANUARY_1970), None, None)
         })?;
 
         self.add_category(&Category { 
             id: Some(St::TRANSFER_OUTCOME_ID), 
             name: TRANSFER_OUTCOME_CAT_NAME.to_owned(),
             category_type: CategoryType::Outcome,
-            meta_info: MetaInfo::new(origin, Some(*JANUARY_1970), None, None)
+            meta_info: MetaInfo::new(Some(*JANUARY_1970), None, None)
         })
     }
 
@@ -148,7 +146,10 @@ where
         // Hence there is a way to restore consistency.
         //
 
-        self.storage.add_transaction(self.encrypt_transaction(transaction)?)?;
+        let mut transaction = self.encrypt_transaction(transaction)?;
+        transaction.meta_info.set_origin_if_absent(self.instance_id());
+
+        self.storage.add_transaction(transaction)?;
         self.storage.update_account(self.encrypt_account(&decrypted_account)?)?;
 
         Ok(())
@@ -167,7 +168,6 @@ where
         //
 
         let amount = amount.abs();
-        let origin = self.instance_id();
 
         self.add_transaction(&Transaction{
             id: None,
@@ -176,7 +176,7 @@ where
             account_id: to_account,
             category_id: St::TRANSFER_INCOME_ID,
             amount: amount,
-            meta_info: MetaInfo::new(origin, Some(timestamp), None, None)
+            meta_info: MetaInfo::new(Some(timestamp), None, None)
         })?;
 
         self.add_transaction(&Transaction{
@@ -186,7 +186,7 @@ where
             account_id: from_account,
             category_id: St::TRANSFER_OUTCOME_ID,
             amount: -amount,
-            meta_info: MetaInfo::new(origin, Some(timestamp), None, None)
+            meta_info: MetaInfo::new(Some(timestamp), None, None)
         })?;
 
         Ok(())
@@ -294,7 +294,10 @@ where
     /// 
     /// * `account` - account data
     pub fn add_account(&self, account: &Account) -> Result<()> {
-        self.storage.add_account(self.encrypt_account(account)?)
+        let mut account = self.encrypt_account(account)?;
+        account.meta_info.set_origin_if_absent(self.instance_id());
+
+        self.storage.add_account(account)
     }
 
     /// Remove an account if possible (or forced).
@@ -335,7 +338,10 @@ where
     /// 
     /// * `category` - category data
     pub fn add_category(&self, category: &Category) -> Result<()> {
-        self.storage.add_category(self.encrypt_category(category)?)
+        let mut category = self.encrypt_category(category)?;
+        category.meta_info.set_origin_if_absent(self.instance_id());
+
+        self.storage.add_category(category)
     }
 
     /// Remove category if possible.
@@ -373,7 +379,10 @@ where
     /// 
     /// * `plan` - plan data
     pub fn add_plan(&self, plan: &Plan) -> Result<()> {
-        self.storage.add_plan(self.encrypt_plan(plan)?)
+        let mut plan = self.encrypt_plan(plan)?;
+        plan.meta_info.set_origin_if_absent(self.instance_id());
+        
+        self.storage.add_plan(plan)
     }
 
     /// Remove plan.
@@ -652,7 +661,7 @@ where
         self.merge_step(&changelog.accounts.added,
             |account| {
                 account.meta_info.added_timestamp.unwrap().ge(last_sync) &&
-                account.meta_info.origin != self.instance_id().into_bytes()
+                account.meta_info.origin.unwrap() != self.instance_id().into_bytes()
             }, 
             |account| {
                 //
@@ -670,7 +679,7 @@ where
         self.merge_step(&changelog.categories.added,
             |category| {
                 category.meta_info.added_timestamp.unwrap().ge(last_sync) &&
-                category.meta_info.origin != self.instance_id().into_bytes()
+                category.meta_info.origin.unwrap() != self.instance_id().into_bytes()
             },
             |category| { self.add_category(category) }
         )?;
@@ -678,7 +687,7 @@ where
         self.merge_step(&changelog.plans.added,
             |plan| {
                 plan.meta_info.added_timestamp.unwrap().ge(last_sync) &&
-                plan.meta_info.origin != self.instance_id().into_bytes()
+                plan.meta_info.origin.unwrap() != self.instance_id().into_bytes()
             }, 
             |plan| { self.add_plan(plan) }
         )?;
@@ -686,7 +695,7 @@ where
         self.merge_step(&changelog.transactions.added,
             |transaction| {
                 transaction.meta_info.added_timestamp.unwrap().ge(last_sync) &&
-                transaction.meta_info.origin != self.instance_id().into_bytes()
+                transaction.meta_info.origin.unwrap() != self.instance_id().into_bytes()
             },
             |transaction| { self.add_transaction(transaction) }
         )?;
@@ -704,7 +713,7 @@ where
         self.merge_step(&changelog.transactions.removed,
             |transaction| {
                 transaction.meta_info.removed_timestamp.unwrap().ge(last_sync) &&
-                transaction.meta_info.origin != self.instance_id().into_bytes()
+                transaction.meta_info.origin.unwrap() != self.instance_id().into_bytes()
             },
             |transaction| {
                 self.remove_transaction(transaction.id.unwrap(), false,
@@ -715,7 +724,7 @@ where
         self.merge_step(&changelog.plans.removed,
             |plan| {
                 plan.meta_info.removed_timestamp.unwrap().ge(last_sync) &&
-                plan.meta_info.origin != self.instance_id().into_bytes()
+                plan.meta_info.origin.unwrap() != self.instance_id().into_bytes()
             },
             |plan| {
                 self.remove_plan(plan.id.unwrap(), plan.meta_info.removed_timestamp.unwrap())
@@ -725,7 +734,7 @@ where
         self.merge_step(&changelog.categories.removed,
             |category| {
                 category.meta_info.removed_timestamp.unwrap().ge(last_sync) &&
-                category.meta_info.origin != self.instance_id().into_bytes()
+                category.meta_info.origin.unwrap() != self.instance_id().into_bytes()
             },
             |category| {
                 self.remove_category(category.id.unwrap(), category.meta_info.removed_timestamp.unwrap())
@@ -735,7 +744,7 @@ where
         self.merge_step(&changelog.accounts.removed,
             |account| {
                 account.meta_info.removed_timestamp.unwrap().ge(last_sync) &&
-                account.meta_info.origin != self.instance_id().into_bytes()
+                account.meta_info.origin.unwrap() != self.instance_id().into_bytes()
             },
             |account| {
                 self.remove_account(account.id.unwrap(), false,

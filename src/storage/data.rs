@@ -30,7 +30,7 @@ pub enum CategoryType {
 #[derive(Serialize, Deserialize, Clone, Copy)]
 pub struct MetaInfo {
     // Origin (instance, where an object was created)
-    pub origin: [u8; 16],
+    pub origin: Option<[u8; 16]>,
 
     // Creation timestamp
     pub added_timestamp: Option<Timestamp>,
@@ -50,14 +50,20 @@ impl MetaInfo {
     /// * `added_timestamp` - creation timestamp or `None`
     /// * `changed_timestamp` - change timestamp or `None`
     /// * `removed_timestamp` - removal timestamp or `None`
-    pub fn new(origin: &InstanceId, added_timestamp: Option<Timestamp>, 
-        changed_timestamp: Option<Timestamp>, removed_timestamp: Option<Timestamp>) -> Self 
+    pub fn new(added_timestamp: Option<Timestamp>, changed_timestamp: Option<Timestamp>,
+        removed_timestamp: Option<Timestamp>) -> Self 
     {
         MetaInfo {
-            origin: origin.into_bytes(),
+            origin: None,
             added_timestamp, 
             changed_timestamp, 
             removed_timestamp
+        }
+    }
+
+    pub(crate) fn set_origin_if_absent(&mut self, origin: &InstanceId) {
+        if let None = self.origin {
+            self.origin = Some(origin.into_bytes());
         }
     }
 }
