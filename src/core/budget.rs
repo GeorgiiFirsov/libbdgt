@@ -160,6 +160,7 @@ where
     /// * `amount` - amount of money to transfer between accounts
     /// * `from_account` - account to transfer from
     /// * `to_account` - account to transfer to
+    /// * `timestamp` - transfer date
     pub fn add_transfer(&self, amount: isize, from_account: Id, to_account: Id, timestamp: Timestamp) -> Result<()> {
         //
         // Transfer can be added only locally, i.e. when syncronization is performed, no notion
@@ -168,6 +169,7 @@ where
         //
 
         let amount = amount.abs();
+        let now = Clock::now();
 
         self.add_transaction(&Transaction{
             id: None,
@@ -176,7 +178,7 @@ where
             account_id: to_account,
             category_id: St::TRANSFER_INCOME_ID,
             amount: amount,
-            meta_info: MetaInfo::new(Some(timestamp), None, None)
+            meta_info: MetaInfo::new(Some(now), None, None)
         })?;
 
         self.add_transaction(&Transaction{
@@ -186,7 +188,7 @@ where
             account_id: from_account,
             category_id: St::TRANSFER_OUTCOME_ID,
             amount: -amount,
-            meta_info: MetaInfo::new(Some(timestamp), None, None)
+            meta_info: MetaInfo::new(Some(now), None, None)
         })?;
 
         Ok(())
